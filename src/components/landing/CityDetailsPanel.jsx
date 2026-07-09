@@ -62,7 +62,7 @@ export default function CityDetailsPanel({ city, onClose }) {
           </button>
         </div>
 
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-5 py-6 space-y-6">
           <div className="flex flex-col items-center">
             <div className="relative w-44 h-44">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
