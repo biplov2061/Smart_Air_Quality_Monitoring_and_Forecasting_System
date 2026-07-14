@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents, AttributionControl } from "react-leaflet"
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet"
 import L from "leaflet"
 import { useAQI } from "../../context/useAQI"
 import { getAQIColor, getAQIBand } from "../../data/aqiService"
@@ -19,17 +19,6 @@ function MapController({ searchQuery, filteredCities }) {
     }
   }, [searchQuery, filteredCities, map])
 
-  return null
-}
-
-function ClickHandler({ onPick }) {
-  useMapEvents({
-    click(e) {
-      const lat = Math.max(-90, Math.min(90, e.latlng.lat))
-      const lng = ((e.latlng.lng + 180) % 360 + 360) % 360 - 180
-      onPick?.(lat, lng)
-    },
-  })
   return null
 }
 
@@ -212,7 +201,7 @@ const AQI_COLORS = [
   { max: 500, color: "#7e0023", label: "Hazardous" },
 ]
 
-export default function GlobalMap({ searchQuery, onPointSelect }) {
+export default function GlobalMap({ searchQuery, onCitySelect }) {
   const { cities } = useAQI()
   const [hoveredCity, setHoveredCity] = useState(null)
 
@@ -252,16 +241,12 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
           className="w-full h-full"
           zoomControl={false}
           scrollWheelZoom={true}
-          attributionControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-          {/* Minimal, required attribution (drops the "Leaflet" prefix). */}
-          <AttributionControl position="bottomright" prefix={false} />
           <MapController searchQuery={searchQuery} filteredCities={filteredCities} />
-          <ClickHandler onPick={(lat, lng) => onPointSelect?.({ lat, lng })} />
           <RealisticHeatmap filteredCities={filteredCities} />
           <GlowLayer filteredCities={filteredCities} />
 
@@ -283,14 +268,7 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
                   opacity: 0.9,
                 }}
                 eventHandlers={{
-                  click: () =>
-                    onPointSelect?.({
-                      lat: city.lat,
-                      lng: city.lng,
-                      name: city.name,
-                      country: city.country,
-                      preview: city,
-                    }),
+                  click: () => onCitySelect?.(city),
                   mouseover: () => setHoveredCity(city.id),
                   mouseout: () => setHoveredCity(null),
                 }}
@@ -321,7 +299,7 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
         </span>
       </div>
 
-      <div className="absolute bottom-7 left-3 right-3 z-[1000] flex items-end justify-between gap-2 pointer-events-none">
+      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end justify-between gap-2 pointer-events-none">
         <div className="flex gap-1 items-center bg-white/90 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
           {AQI_COLORS.map((band) => (
             <div key={band.max} className="flex items-center gap-1" title={`${band.label} (0-${band.max})`}>
