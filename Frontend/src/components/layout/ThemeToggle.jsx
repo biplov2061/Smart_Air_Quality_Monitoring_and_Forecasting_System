@@ -14,7 +14,9 @@ export default function ThemeToggle() {
     document.documentElement.dataset.theme = theme
     try {
       localStorage.setItem("theme", theme)
-    } catch {
+    } catch 
+    {
+      print("error occured while theme toggling !!!")
     }
   }, [theme])
 
