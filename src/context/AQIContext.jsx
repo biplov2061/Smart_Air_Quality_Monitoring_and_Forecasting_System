@@ -23,31 +23,25 @@ function getTimeAgo() {
   return mins < 1 ? "Just now" : `${mins} min ago`
 }
 
-function fillMissing(cities) {
+function enhance(cities) {
   return cities.map((c) => ({
     ...c,
-    aqi: c.aqi ?? Math.floor(Math.random() * 60) + 15,
-    color: getAQIColor(c.aqi ?? 30),
-    band: getAQIBand(c.aqi ?? 30),
+    aqi: c.aqi ?? null,
+    color: c.aqi != null ? getAQIColor(c.aqi) : "#94a3b8",
+    band: c.aqi != null ? getAQIBand(c.aqi) : "No data",
   }))
 }
 
 export function AQIProvider({ children }) {
-  const [cities, setCities] = useState(() =>
-    fillMissing(cityList.map((c) => ({ ...c, id: c.id || Math.random().toString(36).substring(2, 9) })))
-  )
+  const [cities, setCities] = useState(() => enhance(cityList))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [progress, setProgress] = useState(0)
   const mountedRef = useRef(true)
-  const fetchedOnce = useRef(false)
 
   const timeAgo = useSyncExternalStore(subscribeToTime, getTimeAgo, getTimeAgo)
 
   const loadData = useCallback(async () => {
-    setError(null)
-    setProgress(0)
-
     try {
       const results = await fetchAllCities(cityList, (p) => {
         if (mountedRef.current) setProgress(p)
@@ -55,41 +49,27 @@ export function AQIProvider({ children }) {
 
       if (!mountedRef.current) return
 
-      const enhanced = results.map((r) => ({
-        ...r,
-        aqi: r.aqi ?? Math.floor(Math.random() * 60) + 15,
-        color: getAQIColor(r.aqi ?? 30),
-        band: getAQIBand(r.aqi ?? 30),
-      }))
-
-      setCities(enhanced)
+      setCities(enhance(results))
       globalLastUpdated = new Date().toISOString()
       notifyTimeListeners()
       setError(null)
-      fetchedOnce.current = true
     } catch (err) {
       if (!mountedRef.current) return
-      console.warn("Failed to fetch AQI data, using fallback:", err.message)
       setError(err.message)
     } finally {
       if (mountedRef.current) {
         setLoading(false)
-        if (!fetchedOnce.current) {
-          fetchedOnce.current = true
-        }
       }
     }
   }, [])
 
   useEffect(() => {
+    mountedRef.current = true
     const timer = setInterval(notifyTimeListeners, 60000)
 
-    async function init() {
-      await loadData()
-    }
-    init()
+    loadData()
 
-    const interval = setInterval(() => init(), REFRESH_INTERVAL)
+    const interval = setInterval(() => loadData(), REFRESH_INTERVAL)
     return () => {
       mountedRef.current = false
       clearInterval(interval)
@@ -102,10 +82,13 @@ export function AQIProvider({ children }) {
     loadData()
   }, [loadData])
 
+  const citiesWithData = cities.filter((c) => c.aqi != null)
   const globalStats = {
-    citiesMonitored: cities.length,
-    countriesCovered: new Set(cities.map((c) => c.country)).size,
-    avgAQI: Math.round(cities.reduce((s, c) => s + (c.aqi || 0), 0) / cities.length),
+    citiesMonitored: citiesWithData.length,
+    countriesCovered: new Set(citiesWithData.map((c) => c.country)).size,
+    avgAQI: citiesWithData.length > 0
+      ? Math.round(citiesWithData.reduce((s, c) => s + c.aqi, 0) / citiesWithData.length)
+      : 0,
     updatedAt: timeAgo,
   }
 

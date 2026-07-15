@@ -39,13 +39,13 @@ export default function HeatMap() {
   }, [allCities])
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-slate-900 font-display font-semibold">AQI Heat Map</h3>
-        <span className="text-xs text-slate-400">Geographic distribution</span>
+        <h3 className="text-slate-900 dark:text-white font-display font-semibold">AQI Heat Map</h3>
+        <span className="text-xs text-slate-400 dark:text-slate-500">Geographic distribution</span>
       </div>
 
-      <div className="relative aspect-square w-full bg-gradient-to-br from-emerald-900/5 to-slate-900/10 rounded-xl p-2">
+      <div className="relative aspect-square w-full bg-gradient-to-br from-emerald-900/5 to-slate-900/10 dark:from-emerald-900/10 dark:to-slate-900/30 rounded-xl p-2">
         <div className="grid grid-cols-9 gap-0.5 w-full h-full">
           {cityGrid.map((cell, i) => (
             <div
@@ -63,7 +63,7 @@ export default function HeatMap() {
 
       <div className="flex items-center justify-between mt-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Low</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">Low</span>
           <div className="flex gap-[1px]">
             {[0, 50, 100, 150, 200, 300].map((v) => (
               <div
@@ -73,9 +73,9 @@ export default function HeatMap() {
               />
             ))}
           </div>
-          <span className="text-xs text-slate-400">High</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">High</span>
         </div>
-        <span className="text-xs text-slate-400 font-mono">{allCities.length} city sources</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">{allCities.length} city sources</span>
       </div>
     </div>
   )

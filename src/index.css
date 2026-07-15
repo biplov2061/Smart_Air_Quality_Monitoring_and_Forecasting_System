@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-aqi-good: #00e400;
   --color-aqi-moderate: #ffff00;

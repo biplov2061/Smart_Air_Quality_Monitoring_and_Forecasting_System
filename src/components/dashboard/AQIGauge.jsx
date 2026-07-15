@@ -8,16 +8,16 @@ export default function AQIGauge({ aqi = 182, city = "Delhi, India" }) {
   const offset = circumference - (percentage / 100) * circumference
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-slate-900 font-display font-semibold">Live AQI</h3>
-        <span className="text-xs text-slate-400">{city}</span>
+        <h3 className="text-slate-900 dark:text-white font-display font-semibold">Live AQI</h3>
+        <span className="text-xs text-slate-400 dark:text-slate-500">{city}</span>
       </div>
 
       <div className="flex flex-col items-center">
         <div className="relative w-48 h-48">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="80" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#f1f5f9" strokeWidth="12" className="dark:stroke-slate-700" />
             <circle
               cx="100"
               cy="100"
@@ -38,7 +38,7 @@ export default function AQIGauge({ aqi = 182, city = "Delhi, India" }) {
             >
               {aqi}
             </span>
-            <span className="text-sm font-medium text-slate-500 mt-1">{band}</span>
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">{band}</span>
           </div>
         </div>
 
@@ -56,7 +56,7 @@ export default function AQIGauge({ aqi = 182, city = "Delhi, India" }) {
                 className="w-3 h-3 rounded-sm"
                 style={{ backgroundColor: band.color }}
               />
-              <span className="text-[8px] text-slate-400 leading-tight text-center">{band.label}</span>
+              <span className="text-[8px] text-slate-400 dark:text-slate-500 leading-tight text-center">{band.label}</span>
             </div>
           ))}
         </div>

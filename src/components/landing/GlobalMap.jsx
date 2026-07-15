@@ -1,327 +1,232 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet"
-import L from "leaflet"
+import maplibregl from "maplibre-gl"
 import { useAQI } from "../../context/useAQI"
-import { getAQIColor, getAQIBand } from "../../data/aqiService"
-import "leaflet/dist/leaflet.css"
+import { getAQIColor } from "../../data/aqiService"
+import "maplibre-gl/dist/maplibre-gl.css"
 
-function MapController({ searchQuery, filteredCities }) {
-  const map = useMap()
+const DARK_TILES = "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+const DARK_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>, <a href="https://carto.com/">CARTO</a>'
 
-  useEffect(() => {
-    if (filteredCities.length === 1) {
-      map.setView([filteredCities[0].lat, filteredCities[0].lng], 5, { animate: true })
-    } else if (filteredCities.length > 1) {
-      const bounds = filteredCities.map((c) => [c.lat, c.lng])
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 4, animate: true })
-    } else {
-      map.setView([20, 0], 2, { animate: true })
-    }
-  }, [searchQuery, filteredCities, map])
-
-  return null
-}
-
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : { r: 0, g: 0, b: 0 }
-}
-
-function AQIPulseStyles() {
-  useEffect(() => {
-    const style = document.createElement("style")
-    style.textContent = `
-      @keyframes aqi-ring-pulse {
-        0% { opacity: 0.6; r: var(--ring-min); }
-        50% { opacity: 0.05; r: var(--ring-max); }
-        100% { opacity: 0.6; r: var(--ring-min); }
-      }
-      @keyframes aqi-breathing {
-        0%, 100% { opacity: 0.6; }
-        50% { opacity: 1; }
-      }
-      @keyframes aqi-glow-pulse {
-        0%, 100% { filter: drop-shadow(0 0 4px var(--glow-color)); }
-        50% { filter: drop-shadow(0 0 12px var(--glow-color)); }
-      }
-      .aqi-label {
-        animation: aqi-breathing 3s ease-in-out infinite;
-      }
-    `
-    document.head.appendChild(style)
-    return () => style.remove()
-  }, [])
-  return null
-}
-
-function RealisticHeatmap({ filteredCities }) {
-  const map = useMap()
-  const canvasRef = useRef(null)
-  const animRef = useRef(null)
-
-  useEffect(() => {
-    const canvas = L.DomUtil.create("canvas", "")
-    canvas.style.cssText =
-      "position:absolute;top:0;left:0;pointer-events:none;z-index:400;mix-blend-mode:screen"
-    canvasRef.current = canvas
-    map.getPanes().overlayPane.appendChild(canvas)
-
-    const scale = 2.5
-    let time = 0
-
-    const resize = () => {
-      const size = map.getSize()
-      canvas.width = Math.ceil(size.x / scale)
-      canvas.height = Math.ceil(size.y / scale)
-      canvas.style.width = size.x + "px"
-      canvas.style.height = size.y + "px"
-    }
-
-    const draw = () => {
-      const ctx = canvas.getContext("2d")
-      const w = canvas.width
-      const h = canvas.height
-      ctx.clearRect(0, 0, w, h)
-
-      filteredCities.forEach((city) => {
-        const point = map.latLngToContainerPoint([city.lat, city.lng])
-        const px = point.x / scale
-        const py = point.y / scale
-
-        const intensity = Math.min(1, city.aqi / 300)
-        const baseRadius = Math.max(35, city.aqi * 0.7) / scale
-        const pulseFactor = 1 + 0.2 * Math.sin(time + city.aqi * 0.01)
-        const pulseRadius = baseRadius * pulseFactor
-        const color = getAQIColor(city.aqi)
-        const rgb = hexToRgb(color)
-
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, pulseRadius)
-        const peakAlpha = 0.3 + intensity * 0.4
-        grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha})`)
-        grad.addColorStop(0.25, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.7})`)
-        grad.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.3})`)
-        grad.addColorStop(0.8, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.1})`)
-        grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`)
-
-        ctx.fillStyle = grad
-        ctx.beginPath()
-        ctx.arc(px, py, pulseRadius, 0, Math.PI * 2)
-        ctx.fill()
-
-        if (city.aqi > 80) {
-          const hazeGrad = ctx.createRadialGradient(px, py, 0, px, py, pulseRadius * 3)
-          hazeGrad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.05)`)
-          hazeGrad.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},0.02)`)
-          hazeGrad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`)
-          ctx.fillStyle = hazeGrad
-          ctx.beginPath()
-          ctx.arc(px, py, pulseRadius * 3, 0, Math.PI * 2)
-          ctx.fill()
-        }
-      })
-
-      time += 0.025
-      animRef.current = requestAnimationFrame(draw)
-    }
-
-    resize()
-    map.on("moveend zoomend resize", resize)
-    draw()
-
-    return () => {
-      map.off("moveend zoomend resize", resize)
-      if (animRef.current) cancelAnimationFrame(animRef.current)
-      canvas.remove()
-    }
-  }, [map, filteredCities])
-
-  return null
-}
-
-function GlowLayer({ filteredCities }) {
-  const map = useMap()
-
-  useEffect(() => {
-    const group = L.layerGroup()
-
-    filteredCities.forEach((city) => {
-      const color = getAQIColor(city.aqi)
-      const intensity = Math.min(1, city.aqi / 300)
-      const baseRadius = Math.max(15, city.aqi * 0.25)
-
-      if (city.aqi > 60) {
-        L.circleMarker([city.lat, city.lng], {
-          radius: baseRadius * 4,
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.03 * intensity,
-          weight: 1,
-          opacity: 0.06 * intensity,
-        }).addTo(group)
-      }
-
-      L.circleMarker([city.lat, city.lng], {
-        radius: baseRadius * 2.5,
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.07 * intensity,
-        weight: 0,
-      }).addTo(group)
-
-      L.circleMarker([city.lat, city.lng], {
-        radius: baseRadius * 1.3,
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.15 * intensity,
-        weight: 0,
-      }).addTo(group)
-    })
-
-    group.addTo(map)
-    return () => {
-      map.removeLayer(group)
-    }
-  }, [filteredCities, map])
-
-  return null
-}
-
-const AQI_COLORS = [
+const LEGEND = [
   { max: 50, color: "#00e400", label: "Good" },
   { max: 100, color: "#ffff00", label: "Moderate" },
-  { max: 150, color: "#ff7e00", label: "Unhealthy (Sensitive)" },
+  { max: 150, color: "#ff7e00", label: "Sensitive" },
   { max: 200, color: "#ff0000", label: "Unhealthy" },
-  { max: 300, color: "#8f3f97", label: "Very Unhealthy" },
+  { max: 300, color: "#8f3f97", label: "V.Unhealthy" },
   { max: 500, color: "#7e0023", label: "Hazardous" },
 ]
 
+function citiesToGeoJSON(cities) {
+  return {
+    type: "FeatureCollection",
+    features: cities.map((c) => ({
+      type: "Feature",
+      properties: {
+        id: c.id,
+        name: c.name,
+        country: c.country,
+        aqi: c.aqi,
+        color: getAQIColor(c.aqi),
+      },
+      geometry: { type: "Point", coordinates: [c.lng, c.lat] },
+    })),
+  }
+}
+
 export default function GlobalMap({ searchQuery, onCitySelect }) {
   const { cities } = useAQI()
-  const [hoveredCity, setHoveredCity] = useState(null)
+  const containerRef = useRef(null)
+  const mapRef = useRef(null)
+  const citiesRef = useRef([])
+  const onSelectRef = useRef(onCitySelect)
+  const [mapLoaded, setMapLoaded] = useState(false)
+
+  useEffect(() => {
+    onSelectRef.current = onCitySelect
+  }, [onCitySelect])
 
   const filteredCities = useMemo(() => {
     if (!searchQuery) return cities
     const q = searchQuery.toLowerCase()
     return cities.filter(
-      (city) =>
-        city.name.toLowerCase().includes(q) || city.country.toLowerCase().includes(q)
+      (c) =>
+        c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
     )
   }, [searchQuery, cities])
 
+  const visibleCities = useMemo(() => filteredCities.filter((c) => c.aqi != null), [filteredCities])
+
   const topPolluted = useMemo(() => {
-    return [...filteredCities].sort((a, b) => b.aqi - a.aqi).slice(0, 5)
-  }, [filteredCities])
+    return [...visibleCities].sort((a, b) => b.aqi - a.aqi).slice(0, 3)
+  }, [visibleCities])
+
+  useEffect(() => {
+    if (mapRef.current || !containerRef.current) return
+
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          basemap: {
+            type: "raster",
+            tiles: [DARK_TILES],
+            tileSize: 256,
+            attribution: DARK_ATTR,
+          },
+        },
+        layers: [
+          { id: "basemap", type: "raster", source: "basemap", minzoom: 0, maxzoom: 22 },
+        ],
+      },
+      center: [0, 20],
+      zoom: 2,
+      attributionControl: false,
+    })
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right")
+    map.dragRotate.disable()
+
+    map.on("load", () => {
+      const geojson = citiesToGeoJSON(visibleCities)
+
+      map.addSource("cities", { type: "geojson", data: geojson })
+
+      map.addLayer({
+        id: "cities-heat",
+        type: "heatmap",
+        source: "cities",
+        paint: {
+          "heatmap-radius": 60,
+          "heatmap-opacity": 0.6,
+          "heatmap-intensity": 0.8,
+          "heatmap-weight": ["step", ["get", "aqi"], 0, 50, 0.3, 100, 0.6, 150, 0.8, 200, 1, 300, 1.2, 500, 1.5],
+          "heatmap-color": [
+            "interpolate",
+            ["linear"],
+            ["heatmap-density"],
+            0, "rgba(0,0,0,0)",
+            0.2, "rgba(0,228,100,0.1)",
+            0.4, "rgba(255,255,0,0.15)",
+            0.6, "rgba(255,126,0,0.2)",
+            0.8, "rgba(255,0,0,0.3)",
+            1, "rgba(143,63,151,0.4)",
+          ],
+        },
+      })
+
+      map.addLayer({
+        id: "cities-glow",
+        type: "circle",
+        source: "cities",
+        paint: {
+          "circle-radius": ["step", ["get", "aqi"], 40, 50, 50, 100, 60, 150, 70, 200, 80, 300, 90, 500, 100],
+          "circle-color": "#ffffff",
+          "circle-opacity": 0.08,
+          "circle-blur": 0.9,
+        },
+      })
+
+      map.addLayer({
+        id: "cities-dot-outer",
+        type: "circle",
+        source: "cities",
+        paint: {
+          "circle-radius": ["step", ["get", "aqi"], 12, 50, 14, 100, 18, 150, 22, 200, 28, 300, 34, 500, 40],
+          "circle-color": ["get", "color"],
+          "circle-opacity": 0.25,
+          "circle-blur": 0.5,
+        },
+      })
+
+      map.addLayer({
+        id: "cities-dot",
+        type: "circle",
+        source: "cities",
+        paint: {
+          "circle-radius": ["step", ["get", "aqi"], 6, 50, 8, 100, 12, 150, 16, 200, 22, 300, 30, 500, 40],
+          "circle-color": ["get", "color"],
+          "circle-opacity": 0.95,
+          "circle-stroke-color": "rgba(255,255,255,0.3)",
+          "circle-stroke-width": 1.5,
+        },
+      })
+
+      map.on("click", "cities-dot", (e) => {
+        if (!e.features?.[0]) return
+        const props = e.features[0].properties
+        const city = citiesRef.current.find((c) => c.id === props.id)
+        if (city) onSelectRef.current?.(city)
+      })
+
+      map.on("mouseenter", "cities-dot", () => {
+        map.getCanvas().style.cursor = "pointer"
+      })
+
+      map.on("mouseleave", "cities-dot", () => {
+        map.getCanvas().style.cursor = ""
+      })
+
+      setMapLoaded(true)
+    })
+
+    mapRef.current = map
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+      setMapLoaded(false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    citiesRef.current = visibleCities
+    if (!mapRef.current || !mapLoaded) return
+    const map = mapRef.current
+    const source = map.getSource("cities")
+    if (source) source.setData(citiesToGeoJSON(visibleCities))
+
+    if (visibleCities.length === 1) {
+      map.flyTo({ center: [visibleCities[0].lng, visibleCities[0].lat], zoom: 5, duration: 1000 })
+    } else if (visibleCities.length > 1) {
+      const bounds = visibleCities.reduce(
+        (b, c) => b.extend([c.lng, c.lat]),
+        new maplibregl.LngLatBounds([visibleCities[0].lng, visibleCities[0].lat], [visibleCities[0].lng, visibleCities[0].lat])
+      )
+      map.fitBounds(bounds, { padding: 50, maxZoom: 4, duration: 1000 })
+    } else {
+      map.flyTo({ center: [0, 20], zoom: 2, duration: 1000 })
+    }
+  }, [visibleCities, mapLoaded])
 
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden">
-      <div
-        className="absolute inset-0 rounded-2xl z-[1] pointer-events-none"
-        style={{
-          background: "linear-gradient(135deg, rgba(0,228,64,0.15) 0%, rgba(255,255,0,0.1) 25%, rgba(255,126,0,0.12) 50%, rgba(255,0,0,0.15) 75%, rgba(143,63,151,0.1) 100%)",
-          mixBlendMode: "overlay",
-        }}
-      />
-      <div
-        className="absolute inset-0 rounded-2xl z-[1] pointer-events-none"
-        style={{
-          background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 15%, transparent 85%, rgba(0,0,0,0.3) 100%)",
-        }}
-      />
-      <div className="relative w-full h-full z-0">
-        <AQIPulseStyles />
-        <MapContainer
-          center={[20, 0]}
-          zoom={2}
-          className="w-full h-full"
-          zoomControl={false}
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
-          <MapController searchQuery={searchQuery} filteredCities={filteredCities} />
-          <RealisticHeatmap filteredCities={filteredCities} />
-          <GlowLayer filteredCities={filteredCities} />
+      <div ref={containerRef} className="w-full h-full" />
 
-          {filteredCities.map((city) => {
-            const color = getAQIColor(city.aqi)
-            const radius = Math.max(7, city.aqi * 0.1)
-            const rgb = hexToRgb(color)
-            const isTopPolluted = topPolluted.some((c) => c.name === city.name && c.country === city.country)
-            return (
-              <CircleMarker
-                key={city.id}
-                center={[city.lat, city.lng]}
-                radius={radius}
-                pathOptions={{
-                  color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.8)`,
-                  fillColor: color,
-                  fillOpacity: 0.95,
-                  weight: isTopPolluted ? 3 : 2,
-                  opacity: 0.9,
-                }}
-                eventHandlers={{
-                  click: () => onCitySelect?.(city),
-                  mouseover: () => setHoveredCity(city.id),
-                  mouseout: () => setHoveredCity(null),
-                }}
-              >
-                <Popup>
-                  <div className="text-center min-w-[140px] p-1">
-                    <p className="font-semibold text-sm">{city.name}</p>
-                    <p className="text-xs text-slate-500">{city.country}</p>
-                    <div className="flex items-center justify-center gap-1.5 mt-2">
-                      <span
-                        className="w-3 h-3 rounded-full inline-block"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="font-bold font-mono text-lg">{city.aqi}</span>
-                      <span className="text-xs text-slate-400">- {getAQIBand(city.aqi)}</span>
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            )
-          })}
-        </MapContainer>
-      </div>
-
-      <div className="absolute top-3 left-3 z-[1000] pointer-events-none bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-        <span className="text-xs text-slate-600 font-mono">
-          {filteredCities.length} cities monitored
+      <div className="absolute top-3 left-3 z-[1000] pointer-events-none bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+        <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">
+          {visibleCities.length} cities with data
         </span>
       </div>
 
       <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end justify-between gap-2 pointer-events-none">
-        <div className="flex gap-1 items-center bg-white/90 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-          {AQI_COLORS.map((band) => (
+        <div className="flex gap-1 items-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+          {LEGEND.map((band) => (
             <div key={band.max} className="flex items-center gap-1" title={`${band.label} (0-${band.max})`}>
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: band.color }}
-              />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: band.color }} />
             </div>
           ))}
-          <span className="text-[10px] text-slate-600 ml-1 font-mono">AQI</span>
+          <span className="text-[10px] text-slate-600 dark:text-slate-400 ml-1 font-mono">AQI</span>
         </div>
         {topPolluted.length > 0 && (
-          <div className="bg-white/90 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
             <div className="flex items-center gap-2.5">
-              {topPolluted.slice(0, 3).map((city) => (
+              {topPolluted.map((city) => (
                 <div key={city.id} className="flex items-center gap-1.5">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: getAQIColor(city.aqi) }}
-                  />
-                  <span className="text-[11px] font-medium text-slate-700">{city.name}</span>
-                  <span className="text-[11px] font-mono text-slate-500">{city.aqi}</span>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getAQIColor(city.aqi) }} />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{city.name}</span>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{city.aqi}</span>
                 </div>
               ))}
             </div>
