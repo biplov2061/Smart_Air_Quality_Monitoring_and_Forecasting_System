@@ -4,6 +4,7 @@ import Home from "./pages/Home"
 import Dashboard from "./pages/Dashboard"
 import Recommendation from "./pages/Recommendation"
 import Prediction from "./pages/Prediction"
+import ChatBot from "./components/chatbot/ChatBot"
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/recommendation" element={<Recommendation />} />
           <Route path="/prediction" element={<Prediction />} />
         </Routes>
+        <ChatBot />
       </BrowserRouter>
     </AQIProvider>
   )
