@@ -64,7 +64,7 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-7">
           <NavLink to="/" active={path === "/"}>Home</NavLink>
           <NavLink to="/dashboard" active={path === "/dashboard"}>Dashboard</NavLink>
-          <NavLink to="/recommendation" active={path === "/recommendation"}>Recommendation</NavLink>
+          <NavLink to="/recommendation" active={path === "/recommendation"}>Safety Guide</NavLink>
           <NavLink to="/prediction" active={path === "/prediction"}>Prediction</NavLink>
           <ThemeToggle />
           <Link
@@ -107,7 +107,7 @@ export default function Header() {
         <div className="glass border-t border-slate-200/70 dark:border-slate-700/70 px-5 py-4 flex flex-col gap-4">
           <NavLink to="/" active={path === "/"} onClick={() => setMenuOpen(false)}>Home</NavLink>
           <NavLink to="/dashboard" active={path === "/dashboard"} onClick={() => setMenuOpen(false)}>Dashboard</NavLink>
-          <NavLink to="/recommendation" active={path === "/recommendation"} onClick={() => setMenuOpen(false)}>Recommendation</NavLink>
+          <NavLink to="/recommendation" active={path === "/recommendation"} onClick={() => setMenuOpen(false)}>Safety Guide</NavLink>
           <NavLink to="/prediction" active={path === "/prediction"} onClick={() => setMenuOpen(false)}>Prediction</NavLink>
           <Link
             to="/dashboard"
