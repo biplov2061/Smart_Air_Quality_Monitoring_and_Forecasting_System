@@ -5,24 +5,41 @@ import { getAQIColor, getAQIBand } from "../data/aqiService"
 import Header from "../components/layout/Header"
 import Footer from "../components/layout/Footer"
 
+const CITY_MAP = [
+  { id: 1, name: "Bhaktapur", country: "Nepal" },
+  { id: 2, name: "Bangkok", country: "Thailand" },
+  { id: 3, name: "Beijing", country: "China" },
+  { id: 4, name: "Cairo", country: "Egypt" },
+  { id: 5, name: "Delhi", country: "India" },
+  { id: 6, name: "Dhaka", country: "Bangladesh" },
+  { id: 7, name: "Kathmandu", country: "Nepal" },
+  { id: 8, name: "London", country: "UK" },
+  { id: 9, name: "Mumbai", country: "India" },
+  { id: 10, name: "New York", country: "USA" },
+  { id: 11, name: "Seoul", country: "South Korea" },
+  { id: 12, name: "Tokyo", country: "Japan" },
+  { id: 13, name: "Pokhara", country: "Nepal" },
+]
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+function formatHourLabel(date) {
+  const h = date.getHours()
+  const period = h >= 12 ? "PM" : "AM"
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  const dayName = DAY_NAMES[date.getDay()]
+  return `${dayName} ${hour12}${period}`
+}
+
 function generateHourlyData(baseAqi) {
   const now = new Date()
   const base = baseAqi ?? 65 + Math.random() * 30
   return Array.from({ length: 24 }, (_, i) => {
-    const hour = (now.getHours() + i) % 24
-    const label = `${hour.toString().padStart(2, "0")}:00`
+    const date = new Date(now.getTime() + i * 60 * 60 * 1000)
     const variation = Math.sin((i / 24) * Math.PI * 2) * 20 + (Math.random() - 0.5) * 10
     const aqi = Math.round(Math.max(10, base + variation + (i < 6 ? 0 : i < 12 ? 15 : -10)))
-    return { time: label, aqi }
+    return { label: formatHourLabel(date), sortKey: i, aqi }
   })
-}
-
-const formatHour = (label) => {
-  const h = parseInt(label, 10)
-  if (isNaN(h)) return label
-  const period = h >= 12 ? "PM" : "AM"
-  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
-  return `${hour12}${period}`
 }
 
 export default function Prediction() {
@@ -35,18 +52,18 @@ export default function Prediction() {
 
   const cityList = useMemo(
     () =>
-      cities
-        .filter((c) => c.aqi != null)
-        .slice(0, 100)
-        .map((c) => ({
+      CITY_MAP.map((c) => {
+        const match = cities.find((cc) => cc.name === c.name)
+        return {
           id: c.id,
-          label: `${c.name}, ${c.country}`,
           name: c.name,
           country: c.country,
-          aqi: c.aqi,
-          lat: c.lat,
-          lng: c.lng,
-        })),
+          label: `${c.name}, ${c.country}`,
+          aqi: match?.aqi ?? 50,
+          lat: match?.lat ?? null,
+          lng: match?.lng ?? null,
+        }
+      }),
     [cities]
   )
 
@@ -94,29 +111,37 @@ export default function Prediction() {
                   placeholder={selectedCity?.label ?? "Search city..."}
                   className="w-full px-4 py-2.5 glass border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 shadow-sm"
                 />
-                {open && search.trim() && (
+                {open && (
                   <ul className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl py-1">
-                    {cityList
-                      .filter((c) =>
-                        c.name.toLowerCase().includes(search.toLowerCase()) ||
-                        c.country.toLowerCase().includes(search.toLowerCase())
+                    {(() => {
+                      const q = search.trim().toLowerCase()
+                      const filtered = q
+                        ? cityList.filter(
+                            (c) =>
+                              c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
+                          )
+                        : cityList
+                      return filtered.length === 0 ? (
+                        <li className="px-4 py-3 text-sm text-slate-400 text-center">No match</li>
+                      ) : (
+                        filtered.map((c, i) => (
+                          <li
+                            key={c.id}
+                            onMouseEnter={() => setActiveIdx(i)}
+                            onClick={() => selectCity(c)}
+                            className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors ${
+                              i === activeIdx ? "bg-slate-100 dark:bg-slate-800" : ""
+                            }`}
+                          >
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getAQIColor(c.aqi) }} />
+                            <span className="flex-1 min-w-0 text-sm text-slate-900 dark:text-white truncate">
+                              {c.name}, <span className="text-slate-400">{c.country}</span>
+                            </span>
+                            <span className="text-sm font-mono font-bold" style={{ color: getAQIColor(c.aqi) }}>{c.aqi}</span>
+                          </li>
+                        ))
                       )
-                      .map((c, i) => (
-                        <li
-                          key={c.id}
-                          onMouseEnter={() => setActiveIdx(i)}
-                          onClick={() => selectCity(c)}
-                          className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors ${
-                            i === activeIdx ? "bg-slate-100 dark:bg-slate-800" : ""
-                          }`}
-                        >
-                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getAQIColor(c.aqi) }} />
-                          <span className="flex-1 min-w-0 text-sm text-slate-900 dark:text-white truncate">
-                            {c.name}, <span className="text-slate-400">{c.country}</span>
-                          </span>
-                          <span className="text-sm font-mono font-bold" style={{ color: getAQIColor(c.aqi) }}>{c.aqi}</span>
-                        </li>
-                      ))}
+                    })()}
                   </ul>
                 )}
               </div>
@@ -142,12 +167,11 @@ export default function Prediction() {
                     </linearGradient>
                   </defs>
                   <XAxis
-                    dataKey="time"
+                    dataKey="label"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 11, fill: "#94a3b8" }}
-                    tickFormatter={formatHour}
-                    interval={2}
+                    interval={3}
                   />
                   <YAxis
                     axisLine={false}
@@ -163,7 +187,6 @@ export default function Prediction() {
                       fontSize: "13px",
                     }}
                     labelStyle={{ color: "#94a3b8" }}
-                    labelFormatter={formatHour}
                     formatter={(value) => [value, "AQI"]}
                   />
                   <Area
@@ -181,7 +204,7 @@ export default function Prediction() {
           </div>
 
           <div className="mt-6 bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <h3 className="text-slate-900 dark:text-white font-display font-semibold mb-4">Hourly Prediction Table</h3>
+            <h3 className="text-slate-900 dark:text-white font-display font-semibold mb-4">24-Hour Prediction Table</h3>
             <div className="overflow-x-auto max-h-72 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-white dark:bg-slate-900">
@@ -189,7 +212,6 @@ export default function Prediction() {
                     <th className="text-left py-3 px-3 font-medium text-slate-400">Time</th>
                     <th className="text-left py-3 px-3 font-medium text-slate-400">Predicted AQI</th>
                     <th className="text-left py-3 px-3 font-medium text-slate-400">Band</th>
-                    <th className="text-left py-3 px-3 font-medium text-slate-400">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -198,14 +220,11 @@ export default function Prediction() {
                     const color = getAQIColor(row.aqi)
                     return (
                       <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
-                        <td className="py-2.5 px-3 text-slate-900 dark:text-white font-medium">{formatHour(row.time)}</td>
+                        <td className="py-2.5 px-3 text-slate-900 dark:text-white font-medium">{row.label}</td>
                         <td className="py-2.5 px-3">
                           <span className="font-mono font-bold" style={{ color }}>{row.aqi}</span>
                         </td>
                         <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{band}</td>
-                        <td className="py-2.5 px-3">
-                          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                        </td>
                       </tr>
                     )
                   })}

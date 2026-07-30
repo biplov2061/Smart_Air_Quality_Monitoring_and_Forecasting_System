@@ -101,6 +101,8 @@ export default function Recommendation() {
                   name="currentAqi"
                   value={form.currentAqi}
                   onChange={handleChange}
+                  min={0}
+                  max={500}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
               </div>
@@ -111,6 +113,8 @@ export default function Recommendation() {
                   name="futureAqi"
                   value={form.futureAqi}
                   onChange={handleChange}
+                  min={0}
+                  max={500}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
               </div>
