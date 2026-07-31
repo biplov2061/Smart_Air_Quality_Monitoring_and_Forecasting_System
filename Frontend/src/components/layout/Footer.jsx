@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-sky-500 flex items-center justify-center">
                 <span className="text-white font-bold text-xs">B</span>
               </div>
               <span className="text-slate-900 dark:text-white font-display font-semibold">bayumandal</span>

@@ -9,15 +9,14 @@ function MapController({ searchQuery, filteredCities }) {
   const map = useMap()
 
   useEffect(() => {
+    if (!searchQuery) return
     if (filteredCities.length === 1) {
       map.setView([filteredCities[0].lat, filteredCities[0].lng], 5, { animate: true })
     } else if (filteredCities.length > 1) {
       const bounds = filteredCities.map((c) => [c.lat, c.lng])
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 4, animate: true })
-    } else {
-      map.setView([20, 0], 2, { animate: true })
     }
-  }, [searchQuery, filteredCities, map])
+  }, [searchQuery, map])
 
   return null
 }
@@ -225,9 +224,14 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
     )
   }, [searchQuery, cities])
 
+  const withData = useMemo(
+    () => filteredCities.filter((c) => c.aqi != null),
+    [filteredCities]
+  )
+
   const topPolluted = useMemo(() => {
-    return [...filteredCities].sort((a, b) => b.aqi - a.aqi).slice(0, 5)
-  }, [filteredCities])
+    return [...withData].sort((a, b) => b.aqi - a.aqi).slice(0, 5)
+  }, [withData])
 
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden">
@@ -249,6 +253,10 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
         <MapContainer
           center={[20, 0]}
           zoom={2}
+          minZoom={2}
+          maxBounds={[[-85, -180], [85, 180]]}
+          maxBoundsViscosity={1.0}
+          worldCopyJump={true}
           className="w-full h-full"
           zoomControl={false}
           scrollWheelZoom={true}
@@ -258,14 +266,13 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
-          {/* Minimal, required attribution (drops the "Leaflet" prefix). */}
           <AttributionControl position="bottomright" prefix={false} />
           <MapController searchQuery={searchQuery} filteredCities={filteredCities} />
           <ClickHandler onPick={(lat, lng) => onPointSelect?.({ lat, lng })} />
-          <RealisticHeatmap filteredCities={filteredCities} />
-          <GlowLayer filteredCities={filteredCities} />
+          <RealisticHeatmap filteredCities={withData} />
+          <GlowLayer filteredCities={withData} />
 
-          {filteredCities.map((city) => {
+          {withData.map((city) => {
             const color = getAQIColor(city.aqi)
             const radius = Math.max(7, city.aqi * 0.1)
             const rgb = hexToRgb(color)
@@ -317,7 +324,7 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
 
       <div className="absolute top-3 left-3 z-[1000] pointer-events-none bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
         <span className="text-xs text-slate-600 font-mono">
-          {filteredCities.length} cities monitored
+          {withData.length} cities monitored
         </span>
       </div>
 

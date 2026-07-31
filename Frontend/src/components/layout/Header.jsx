@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import ThemeToggle from "./ThemeToggle"
+import { useAQI } from "../../context/useAQI"
 
 function NavLink({ to, active, children, onClick }) {
   return (
@@ -16,7 +17,7 @@ function NavLink({ to, active, children, onClick }) {
     >
       {children}
       <span
-        className={`absolute -bottom-1.5 left-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-all duration-300 ${
+        className={`absolute -bottom-1.5 left-0 h-0.5 rounded-full bg-sky-500 transition-all duration-300 ${
           active ? "w-full" : "w-0"
         }`}
       />
@@ -27,6 +28,7 @@ function NavLink({ to, active, children, onClick }) {
 export default function Header() {
   const location = useLocation()
   const path = location.pathname
+  const { online } = useAQI()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -47,7 +49,7 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3.5">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <div className="relative w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
             <span className="text-white font-bold">B</span>
             <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
           </div>
@@ -69,13 +71,17 @@ export default function Header() {
           <ThemeToggle />
           <Link
             to="/dashboard"
-            className="group inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-sm hover:shadow-md"
+            className="group inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 rounded-xl transition-all shadow-sm hover:shadow-md"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-            </span>
-            Live AQI
+            {online ? (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+            ) : (
+              <span className="inline-flex rounded-full h-2 w-2 bg-red-500" />
+            )}
+            {online ? "Live AQI" : "Offline"}
           </Link>
         </div>
 
@@ -98,7 +104,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <div
         className={`md:hidden overflow-hidden transition-[max-height] duration-300 ease-out ${
           menuOpen ? "max-h-64" : "max-h-0"
@@ -112,9 +117,10 @@ export default function Header() {
           <Link
             to="/dashboard"
             onClick={() => setMenuOpen(false)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-slate-900 dark:bg-emerald-600 rounded-xl"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-slate-900 dark:bg-sky-600 rounded-xl"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Live AQI
+            <span className={`w-2 h-2 rounded-full ${online ? "bg-emerald-400" : "bg-red-500"}`} />{" "}
+            {online ? "Live AQI" : "Offline"}
           </Link>
         </div>
       </div>

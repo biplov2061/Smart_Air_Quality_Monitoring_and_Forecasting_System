@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react"
-import { getCities } from "../data/apiClient"
+import { getCities, pingBackend } from "../data/apiClient"
+import { usePolling } from "../data/useApi"
 import { getAQIColor, getAQIBand } from "../data/aqiService"
-import { CITIES_REFRESH_MS, TICK_MS } from "../data/config"
+import { CITIES_REFRESH_MS, TICK_MS, HEALTH_POLL_MS } from "../data/config"
 import { AQIContext } from "./useAQI"
 
 let globalLastUpdated = null
@@ -41,6 +42,8 @@ export function AQIProvider({ children }) {
   const mountedRef = useRef(true)
 
   const timeAgo = useSyncExternalStore(subscribeToTime, getTimeAgo, getTimeAgo)
+  const { data: healthOk } = usePolling(pingBackend, [], HEALTH_POLL_MS)
+  const backendUp = healthOk === true
 
   const loadData = useCallback(async () => {
     setError(null)
@@ -87,12 +90,15 @@ export function AQIProvider({ children }) {
     updatedAt: timeAgo,
   }
 
+  const online = backendUp && withData.length > 0
+
   return (
     <AQIContext.Provider
       value={{
         cities,
         loading,
         error,
+        online,
         lastUpdated: globalLastUpdated,
         refresh,
         globalStats,

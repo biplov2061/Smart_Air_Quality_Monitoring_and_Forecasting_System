@@ -3,11 +3,20 @@ import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceL
 import { getTrend, getHistory } from "../../data/apiClient"
 import { usePolling } from "../../data/useApi"
 import { TREND_REFRESH_MS } from "../../data/config"
+import { withDayLabels } from "../../data/trendAnalysis"
 
 const MODES = [
   { key: "forecast", label: "Forecast" },
   { key: "history", label: "History" },
 ]
+
+const formatHour = (label) => {
+  const h = parseInt(label, 10)
+  if (isNaN(h)) return label
+  const period = h >= 12 ? "PM" : "AM"
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${hour12}${period}`
+}
 
 export default function TrendChart({ lat, lng }) {
   const [mode, setMode] = useState("forecast")
@@ -20,9 +29,14 @@ export default function TrendChart({ lat, lng }) {
     [lat, lng, mode],
     TREND_REFRESH_MS
   )
-  const trendData = data || []
+  const trendData = withDayLabels(data || [])
   const isHistory = mode === "history"
   const forecastStart = !isHistory ? trendData.find((p) => p.forecast)?.time : undefined
+
+  // time ("HH:mm") -> weekday, so the axis/tooltip can read e.g. "Thu 1PM".
+  const dayByTime = {}
+  for (const d of trendData) dayByTime[d.time] = d.day
+  const axisLabel = (t) => `${dayByTime[t] ? dayByTime[t] + " " : ""}${formatHour(t)}`
 
   return (
     <div className="card card-hover p-6">
@@ -74,8 +88,9 @@ export default function TrendChart({ lat, lng }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tickFormatter={axisLabel}
                 interval="preserveStartEnd"
-                minTickGap={24}
+                minTickGap={40}
               />
               <YAxis
                 axisLine={false}
@@ -91,6 +106,7 @@ export default function TrendChart({ lat, lng }) {
                   fontSize: "13px",
                 }}
                 labelStyle={{ color: "#94a3b8" }}
+                labelFormatter={axisLabel}
                 formatter={(value) => [value, "AQI"]}
               />
               {forecastStart && (

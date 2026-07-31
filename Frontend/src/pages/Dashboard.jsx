@@ -12,10 +12,9 @@ import WeatherCard from "../components/dashboard/WeatherCard"
 import TrendChart from "../components/dashboard/TrendChart"
 
 export default function Dashboard() {
-  const { cities } = useAQI()
+  const { cities, online } = useAQI()
 
   const [search, setSearch] = useState("")
-  const [sortBy, setSortBy] = useState("aqi-desc")
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
   const blurRef = useRef(null)
@@ -40,27 +39,32 @@ export default function Dashboard() {
 
   const filteredCities = useMemo(() => {
     const q = search.trim().toLowerCase()
-    let list = rawCities
-    if (q) {
-      list = rawCities.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
-      )
+    if (!q) return [...rawCities].sort((a, b) => b.aqi - a.aqi)
+
+    const scored = []
+    for (const c of rawCities) {
+      const name = c.name.toLowerCase()
+      const country = c.country.toLowerCase()
+      let s = -1
+      if (name.startsWith(q)) s = 0
+      else if (country.startsWith(q)) s = 1
+      else if (name.includes(q)) s = 2
+      else if (country.includes(q)) s = 3
+      if (s >= 0) scored.push({ c, s })
     }
-    const sorted = [...list]
-    if (sortBy === "aqi-desc") sorted.sort((a, b) => b.aqi - a.aqi)
-    else if (sortBy === "aqi-asc") sorted.sort((a, b) => a.aqi - b.aqi)
-    else if (sortBy === "name-asc") sorted.sort((a, b) => a.name.localeCompare(b.name))
-    else if (sortBy === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name))
-    return sorted
-  }, [rawCities, search, sortBy])
+    scored.sort((a, b) => a.s - b.s || b.c.aqi - a.c.aqi)
+    return scored.map((x) => x.c)
+  }, [rawCities, search])
 
   const [selectedCityId, setSelectedCityId] = useState(null)
 
   const selectedCity = useMemo(() => {
-    if (selectedCityId && filteredCities.some((c) => c.id === selectedCityId))
-      return filteredCities.find((c) => c.id === selectedCityId)
-    return filteredCities[0] ?? null
-  }, [filteredCities, selectedCityId])
+    if (selectedCityId) {
+      const found = rawCities.find((c) => c.id === selectedCityId)
+      if (found) return found
+    }
+    return filteredCities[0] ?? rawCities[0] ?? null
+  }, [rawCities, filteredCities, selectedCityId])
 
   const { data: live } = usePolling(
     () =>
@@ -71,14 +75,14 @@ export default function Dashboard() {
     REFRESH_MS
   )
 
-  const liveAqi = live?.aqi ?? selectedCity?.aqi ?? 0
-  const cityLabel = selectedCity?.label ?? "Loading..."
+  const liveAqi = online ? (live?.aqi ?? selectedCity?.aqi ?? null) : null
+  const cityLabel = online ? (selectedCity?.label ?? "Loading...") : "Backend offline"
   const lat = selectedCity?.lat
   const lng = selectedCity?.lng
 
   function selectCity(city) {
     setSelectedCityId(city.id)
-    setSearch("")
+    setSearch(city.label)
     setOpen(false)
     setActiveIdx(-1)
   }
@@ -111,15 +115,24 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 py-6 border-b border-slate-200/70 dark:border-slate-800">
             <div>
               <div className="inline-flex items-center gap-2 mb-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Live</span>
+                {online ? (
+                  <>
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    </span>
+                    <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Live</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    <span className="text-xs font-medium text-red-500 uppercase tracking-wider">Offline</span>
+                  </>
+                )}
               </div>
               <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white">
                 Air Quality{" "}
-                <span className="bg-gradient-to-r from-emerald-500 to-sky-500 bg-clip-text text-transparent">
+                <span className="text-sky-500 dark:text-sky-400">
                   Dashboard
                 </span>
               </h1>
@@ -133,28 +146,17 @@ export default function Dashboard() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setOpen(true); setActiveIdx(-1) }}
-                  onFocus={() => setOpen(true)}
+                  onFocus={(e) => { setOpen(true); e.target.select() }}
                   onBlur={() => { blurRef.current = setTimeout(() => setOpen(false), 150) }}
                   onKeyDown={onKeyDown}
                   placeholder={selectedCity?.label ?? "Search city..."}
-                  className="w-full pl-4 pr-10 py-2.5 glass border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 shadow-sm"
+                  className="w-full px-4 py-2.5 glass border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 shadow-sm"
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-xs bg-transparent border-none text-slate-400 focus:outline-none cursor-pointer"
-                    title="Sort order"
+                {open && search.trim() && filteredCities.length > 0 && (
+                  <ul
+                    className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl py-1"
+                    onMouseDown={(e) => e.preventDefault()}
                   >
-                    <option value="aqi-desc">AQI ↓</option>
-                    <option value="aqi-asc">AQI ↑</option>
-                    <option value="name-asc">A–Z</option>
-                    <option value="name-desc">Z–A</option>
-                  </select>
-                </div>
-                {open && search.trim() && (
-                  <ul className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl py-1">
                     {filteredCities.length === 0 ? (
                       <li className="px-4 py-3 text-sm text-slate-400 text-center">No cities match</li>
                     ) : (

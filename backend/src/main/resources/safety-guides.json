@@ -1,0 +1,457 @@
+[
+  {
+    "id": "good-enjoy",
+    "icon": "🌿",
+    "title": "Air quality is good, enjoy the outdoors",
+    "desc": "Conditions are ideal for outdoor activities, exercise and ventilation. Open windows to let fresh air in.",
+    "severity": "low",
+    "aqiBands": [
+      "good"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 0
+  },
+  {
+    "id": "moderate-watch",
+    "icon": "🙂",
+    "title": "Acceptable air, unusually sensitive people take note",
+    "desc": "Air quality is acceptable for most. If you are unusually sensitive, consider reducing prolonged or heavy outdoor exertion.",
+    "severity": "low",
+    "aqiBands": [
+      "moderate"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 1
+  },
+  {
+    "id": "usg-limit-exertion",
+    "icon": "🚶",
+    "title": "Limit prolonged or heavy outdoor exertion",
+    "desc": "Sensitive groups should cut back on long or intense outdoor activity and take more breaks. Others are unlikely to be affected.",
+    "severity": "medium",
+    "aqiBands": [
+      "usg"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 2
+  },
+  {
+    "id": "unhealthy-reduce-outdoor",
+    "icon": "⚠️",
+    "title": "Reduce outdoor activity",
+    "desc": "Everyone may begin to feel effects. Move workouts indoors and keep outdoor time short.",
+    "severity": "high",
+    "aqiBands": [
+      "unhealthy"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 3
+  },
+  {
+    "id": "mask-outdoors",
+    "icon": "😷",
+    "title": "Wear an N95 / KN95 mask outdoors",
+    "desc": "If you must go outside, wear a well-fitted N95 or KN95 respirator. Cloth and surgical masks do little against fine particulates.",
+    "severity": "high",
+    "aqiBands": [
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 4
+  },
+  {
+    "id": "very-unhealthy-stay-indoors",
+    "icon": "🏠",
+    "title": "Stay indoors and keep air clean",
+    "desc": "Avoid outdoor activity. Stay inside with windows and doors closed and run an air purifier if you have one.",
+    "severity": "high",
+    "aqiBands": [
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 5
+  },
+  {
+    "id": "hazardous-emergency",
+    "icon": "🛑",
+    "title": "Health emergency, avoid all outdoor exposure",
+    "desc": "Everyone should remain indoors, seal gaps around windows and doors, and keep exertion to a minimum until air quality improves.",
+    "severity": "high",
+    "aqiBands": [
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 6
+  },
+  {
+    "id": "windows-closed",
+    "icon": "🪟",
+    "title": "Keep windows and doors closed",
+    "desc": "Prevent polluted outdoor air from coming inside. Use recirculate mode on air conditioning rather than fresh-air intake.",
+    "severity": "medium",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 7
+  },
+  {
+    "id": "air-purifier",
+    "icon": "🌀",
+    "title": "Run a HEPA air purifier indoors",
+    "desc": "A HEPA purifier sized for the room lowers indoor particulate levels. Keep it running in the room where you spend the most time.",
+    "severity": "medium",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 8
+  },
+  {
+    "id": "avoid-traffic",
+    "icon": "🚗",
+    "title": "Avoid busy roads and traffic fumes",
+    "desc": "Pollutant levels spike near heavy traffic. Choose quieter streets and avoid exercising alongside busy roads.",
+    "severity": "low",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 9
+  },
+  {
+    "id": "stay-hydrated",
+    "icon": "💧",
+    "title": "Stay hydrated",
+    "desc": "Drinking water helps your body clear irritants. Keep fluids up, especially if you feel throat or eye irritation.",
+    "severity": "low",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 10
+  },
+  {
+    "id": "children-reschedule-play",
+    "icon": "🧒",
+    "title": "Reschedule children's outdoor play & sports",
+    "desc": "Children breathe faster and take in more air per kilo of body weight. Move play and sports indoors and watch for coughing or wheezing.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [
+      "child",
+      "teen"
+    ],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 11
+  },
+  {
+    "id": "seniors-monitor",
+    "icon": "🧓",
+    "title": "Older adults: monitor breathing and heart symptoms",
+    "desc": "Ageing lungs and hearts are more vulnerable to polluted air. Rest often, keep medication handy and seek care if you feel unwell.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [
+      "senior"
+    ],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 12
+  },
+  {
+    "id": "sensitive-act-early",
+    "icon": "❤️‍🩹",
+    "title": "You're in a sensitive group, act earlier than others",
+    "desc": "Because you flagged high sensitivity, start protective steps (masking, staying indoors) at a lower AQI than the general public.",
+    "severity": "high",
+    "aqiBands": [
+      "moderate",
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [
+      "high"
+    ],
+    "diseases": [],
+    "sortOrder": 13
+  },
+  {
+    "id": "asthma-inhaler",
+    "icon": "🫁",
+    "title": "Asthma: keep your reliever inhaler with you",
+    "desc": "Carry your quick-relief (reliever) inhaler at all times and follow your written asthma action plan. Pre-medicate before any unavoidable exposure.",
+    "severity": "high",
+    "aqiBands": [
+      "moderate",
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "asthma"
+    ],
+    "sortOrder": 14
+  },
+  {
+    "id": "copd-limit",
+    "icon": "🫁",
+    "title": "COPD: minimise exertion and keep medication close",
+    "desc": "Stay indoors during poor air, avoid physical strain, and have your bronchodilator and rescue medication within reach.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "copd"
+    ],
+    "sortOrder": 15
+  },
+  {
+    "id": "heart-watch",
+    "icon": "💓",
+    "title": "Heart condition: watch for chest pain or palpitations",
+    "desc": "Fine particles strain the cardiovascular system. Avoid exertion and seek medical help for chest tightness, palpitations or breathlessness.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "heart"
+    ],
+    "sortOrder": 16
+  },
+  {
+    "id": "respiratory-no-exercise",
+    "icon": "🌬️",
+    "title": "Respiratory condition: avoid outdoor exercise",
+    "desc": "Skip outdoor exercise while air quality is poor and keep any prescribed medication on hand. Report worsening symptoms to your doctor.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "respiratory"
+    ],
+    "sortOrder": 17
+  },
+  {
+    "id": "diabetes-monitor",
+    "icon": "🩸",
+    "title": "Diabetes: pollution can worsen control, monitor closely",
+    "desc": "Air pollution is linked to poorer glucose control and vascular stress. Keep to your medication schedule and monitor how you feel.",
+    "severity": "medium",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "diabetes"
+    ],
+    "sortOrder": 18
+  },
+  {
+    "id": "pregnancy-minimise",
+    "icon": "🤰",
+    "title": "Pregnancy: minimise exposure to protect you and your baby",
+    "desc": "Reduce time outdoors during poor air, keep indoor air clean, and discuss any concerns with your antenatal care provider.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "pregnancy"
+    ],
+    "sortOrder": 19
+  },
+  {
+    "id": "allergy-rinse",
+    "icon": "🤧",
+    "title": "Allergy-prone: rinse off after being outdoors",
+    "desc": "Change clothes and rinse your face, nose and eyes after outdoor exposure to clear settled particles and pollen.",
+    "severity": "low",
+    "aqiBands": [
+      "moderate",
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "allergy"
+    ],
+    "sortOrder": 20
+  },
+  {
+    "id": "kidney-care",
+    "icon": "🫘",
+    "title": "Kidney condition: stay hydrated and avoid strain",
+    "desc": "Pollution adds oxidative and vascular stress. Drink enough water, avoid strenuous outdoor activity and keep to your medication and dialysis schedule.",
+    "severity": "medium",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "kidney"
+    ],
+    "sortOrder": 21
+  },
+  {
+    "id": "immune-protect",
+    "icon": "🛡️",
+    "title": "Weakened immunity: guard against pollution and infection",
+    "desc": "If you are immunocompromised (e.g. cancer treatment), poor air raises infection and complication risk. Stay indoors with clean air, mask up outside and avoid crowds.",
+    "severity": "high",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "cancer"
+    ],
+    "sortOrder": 22
+  },
+  {
+    "id": "skin-protect",
+    "icon": "🧴",
+    "title": "Skin condition: rinse and moisturise after exposure",
+    "desc": "Airborne particles can irritate eczema and other skin conditions. Rinse exposed skin, moisturise, and cover up when air quality is poor.",
+    "severity": "low",
+    "aqiBands": [
+      "moderate",
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "skin"
+    ],
+    "sortOrder": 23
+  },
+  {
+    "id": "migraine-triggers",
+    "icon": "🧠",
+    "title": "Migraine-prone: pollution can trigger attacks",
+    "desc": "Spikes in pollutants are a known migraine trigger. Limit exposure on bad-air days, stay hydrated and keep your usual relief medication handy.",
+    "severity": "medium",
+    "aqiBands": [
+      "usg",
+      "unhealthy",
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [
+      "migraine"
+    ],
+    "sortOrder": 24
+  },
+  {
+    "id": "seek-help",
+    "icon": "🚑",
+    "title": "Seek medical help if symptoms worsen",
+    "desc": "If you experience severe breathlessness, chest pain, dizziness or confusion, treat it as urgent and contact emergency services.",
+    "severity": "high",
+    "aqiBands": [
+      "veryUnhealthy",
+      "hazardous"
+    ],
+    "ageGroups": [],
+    "sensitivities": [],
+    "diseases": [],
+    "sortOrder": 25
+  }
+]
