@@ -1,9 +1,10 @@
 import { getAQIColor, getAQIBand } from "../../data/aqiService"
 
 export default function AQIGauge({ aqi = 182, city = "Delhi, India" }) {
+  const hasData = aqi != null && !isNaN(aqi)
   const color = getAQIColor(aqi)
-  const band = getAQIBand(aqi)
-  const percentage = Math.min((aqi / 500) * 100, 100)
+  const band = hasData ? getAQIBand(aqi) : "No live data"
+  const percentage = hasData ? Math.min((aqi / 500) * 100, 100) : 0
   const circumference = 2 * Math.PI * 80
   const offset = circumference - (percentage / 100) * circumference
 
@@ -42,7 +43,7 @@ export default function AQIGauge({ aqi = 182, city = "Delhi, India" }) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-5xl font-bold font-mono transition-colors duration-500" style={{ color }}>
-              {aqi}
+              {hasData ? aqi : "—"}
             </span>
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">{band}</span>
           </div>

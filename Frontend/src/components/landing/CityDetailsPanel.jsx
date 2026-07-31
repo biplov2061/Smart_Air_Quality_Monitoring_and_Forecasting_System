@@ -34,7 +34,6 @@ function getRecommendation(aqi) {
 }
 
 export default function CityDetailsPanel({ city, onClose, loading }) {
-  // Live weather for the shown location (searched or map-clicked).
   const { data: weather } = usePolling(
     () => (!city || city.lat == null ? Promise.resolve(null) : getWeather(city.lat, city.lng)),
     [city?.lat, city?.lng],
