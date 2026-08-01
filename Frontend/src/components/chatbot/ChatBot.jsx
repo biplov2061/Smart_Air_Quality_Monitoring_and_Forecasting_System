@@ -1,7 +1,9 @@
 import { useState, useRef } from "react"
 import chatIcon from "../../data/photos/chatbot.png"
 
-const replies = [
+const CHAT_API = import.meta.env.VITE_CHAT_API || "http://localhost:8000/api/v1/chat"
+
+const fallbackReplies = [
   "Stay indoors if AQI is above 150.",
   "Wear an N95 mask when stepping out.",
   "Keep windows closed during high pollution.",
@@ -12,25 +14,49 @@ const replies = [
   "Plan outdoor activities during lower AQI hours.",
 ]
 
+async function getReply(message, history) {
+  const res = await fetch(CHAT_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  })
+  if (!res.ok) {
+    throw new Error(`Chat API ${res.status}`)
+  }
+  const data = await res.json()
+  return data.reply
+}
+
 export default function ChatBot() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
     { from: "bot", text: "Hi! Ask me anything about air quality." },
   ])
   const [input, setInput] = useState("")
+  const [typing, setTyping] = useState(false)
   const endRef = useRef(null)
 
-  function handleSend(e) {
+  async function handleSend(e) {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || typing) return
     const userMsg = input.trim()
     setInput("")
     setMessages((prev) => [...prev, { from: "user", text: userMsg }])
-    setTimeout(() => {
-      const reply = replies[Math.floor(Math.random() * replies.length)]
+    setTyping(true)
+    try {
+      const history = messages
+        .filter((m) => m.text && m.text !== userMsg)
+        .map((m) => ({ role: m.from === "user" ? "user" : "model", text: m.text }))
+        .slice(-10)
+      const reply = await getReply(userMsg, history)
       setMessages((prev) => [...prev, { from: "bot", text: reply }])
+    } catch {
+      const reply = fallbackReplies[Math.floor(Math.random() * fallbackReplies.length)]
+      setMessages((prev) => [...prev, { from: "bot", text: reply }])
+    } finally {
+      setTyping(false)
       endRef.current?.scrollIntoView({ behavior: "smooth" })
-    }, 600)
+    }
   }
 
   return (
@@ -55,6 +81,13 @@ export default function ChatBot() {
                 </div>
               </div>
             ))}
+            {typing && (
+              <div className="flex justify-start">
+                <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl rounded-bl-md px-4 py-2 text-sm">
+                  Typing...
+                </div>
+              </div>
+            )}
             <div ref={endRef} />
           </div>
           <form onSubmit={handleSend} className="border-t border-slate-200 dark:border-slate-700 p-3 flex gap-2">
@@ -67,7 +100,8 @@ export default function ChatBot() {
             />
             <button
               type="submit"
-              className="px-3 py-2 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-600 transition-colors"
+              disabled={typing}
+              className="px-3 py-2 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50"
             >
               Send
             </button>
