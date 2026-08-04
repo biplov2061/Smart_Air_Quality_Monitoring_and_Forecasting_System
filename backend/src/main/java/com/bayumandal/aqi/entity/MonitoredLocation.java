@@ -31,6 +31,9 @@ public class MonitoredLocation {
     @Column(nullable = false)
     private double longitude;
 
+    @Column(name = "mlForecastEnabled", nullable = false)
+    private boolean mlForecastEnabled = false;
+
     protected MonitoredLocation() {
     }
 
@@ -39,6 +42,7 @@ public class MonitoredLocation {
         this.country = country;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.mlForecastEnabled = false;
     }
 
     public Long getId() { return id; }
@@ -46,4 +50,5 @@ public class MonitoredLocation {
     public String getCountry() { return country; }
     public double getLatitude() { return latitude; }
     public double getLongitude() { return longitude; }
+    public boolean isForecastSupported() { return mlForecastEnabled; }
 }

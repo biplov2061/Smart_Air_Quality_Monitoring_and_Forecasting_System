@@ -1506,6 +1506,12 @@
     "longitude": 85.3833
   },
   {
+    "name": "Bhaktapur",
+    "country": "Nepal",
+    "latitude": 27.67,
+    "longitude": 85.43
+  },
+  {
     "name": "Tehran",
     "country": "Iran",
     "latitude": 35.6892,
