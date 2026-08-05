@@ -14,6 +14,7 @@ public class AppProperties {
     private String[] corsAllowedOrigins = {"http://localhost:5173"};
     private final OpenMeteo openmeteo = new OpenMeteo();
     private String reverseGeocodeUrl = "https://api.bigdatacloud.net/data/reverse-geocode-client";
+    private String mlServiceUrl = "http://localhost:8000";
 
     public static class OpenMeteo {
         private String airQualityUrl = "https://air-quality-api.open-meteo.com/v1/air-quality";
@@ -30,6 +31,9 @@ public class AppProperties {
 
     public String getReverseGeocodeUrl() { return reverseGeocodeUrl; }
     public void setReverseGeocodeUrl(String reverseGeocodeUrl) { this.reverseGeocodeUrl = reverseGeocodeUrl; }
+
+    public String getMlServiceUrl() { return mlServiceUrl; }
+    public void setMlServiceUrl(String mlServiceUrl) { this.mlServiceUrl = mlServiceUrl; }
 
     public long getRefreshIntervalMs() { return refreshIntervalMs; }
     public void setRefreshIntervalMs(long refreshIntervalMs) { this.refreshIntervalMs = refreshIntervalMs; }
