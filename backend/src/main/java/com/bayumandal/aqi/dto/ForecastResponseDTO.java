@@ -10,8 +10,6 @@
 //                  ]
 //   }
 
-
-
 package com.bayumandal.aqi.dto;
 
 import java.util.List;
