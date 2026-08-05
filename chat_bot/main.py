@@ -1,6 +1,6 @@
-﻿import os
+import os
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
@@ -28,16 +28,13 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
-
 # Request Model for Chatbot
 class ChatRequest(BaseModel):
     message: str
-    history: list[dict] = []  # [{"role": "user" | "model", "text": "..."}] from previous turns
 
 
 # --------------------------------------------------------------------
-# Synchronous Helper Function for Gemini Tool / Function Calling
+# Helper Function for Gemini Tool Calling
 # --------------------------------------------------------------------
 def get_live_air_quality(city: str) -> str:
     """
@@ -91,53 +88,68 @@ def get_live_air_quality(city: str) -> str:
         return f"Failed to fetch live AQI data for {city}: {str(e)}"
 
 
-# System prompt defining chatbot persona
-SYSTEM_PROMPT = (
-    "You are an AI Environmental Assistant for a Global Air Quality Intelligence and Forecasting System. "
-    "When users ask for live AQI or pollution data for a city, use the 'get_live_air_quality' tool to get current numbers. "
-    "Always provide health guidance based on the returned AQI level. "
-    "Keep follow-up replies short and relevant to the ongoing conversation."
-)
+# --------------------------------------------------------------------
+# Strict System Prompt restricting topic domain
+# --------------------------------------------------------------------
+SYSTEM_PROMPT = """
+You are an AI Environmental Assistant strictly dedicated to the Global Air Quality Intelligence and Forecasting System.
+
+CRITICAL INSTRUCTIONS & GUARDRAILS:
+1. TOPIC BOUNDARIES: You must ONLY answer questions directly related to:
+   - Air Quality Index (AQI), PM2.5, PM10, Ozone, NO2, CO, SO2, and air pollution.
+   - Live AQI checks for cities using the 'get_live_air_quality' tool.
+   - Health recommendations, outdoor activity advisories, and precautions based on AQI levels.
+   - Features, scope, and capabilities of this Global Air Quality System project.
+
+2. OUT-OF-SCOPE QUERIES: If a user asks about any topic outside of air quality, environmental safety, or this project (such as general programming, sports, movies, cooking, math, politics, trivia, etc.):
+   - Decline politely and firmly.
+   - State clearly that you can only answer questions regarding air quality, AQI, and environmental health recommendations.
+   - Example Refusal Response: "I am an AI Environmental Assistant focused exclusively on Air Quality Intelligence. I cannot help with that topic, but feel free to ask me about live AQI levels, air pollutants, or health precautions for any city!"
+"""
 
 # --------------------------------------------------------------------
-# 1. Chatbot Endpoint (Supports automatic Live AQI lookup)
+# 1. Chatbot Endpoint
 # --------------------------------------------------------------------
 @app.post("/api/v1/chat")
 async def chat_with_gemini(request: ChatRequest):
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
-    # Build conversational context from prior turns (role: user/model)
-    contents = []
-    for turn in request.history:
-        role = "model" if turn.get("role") == "model" else "user"
-        text = turn.get("text", "").strip()
-        if text:
-            contents.append(types.Content(role=role, parts=[types.Part(text=text)]))
-    contents.append(types.Content(role="user", parts=[types.Part(text=request.message)]))
-
     try:
-        # Pass the tool function inside GenerateContentConfig
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=contents,
+        # Create a chat session with automatic function calling enabled
+        chat = client.chats.create(
+            model="gemini-3.5-flash",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                tools=[get_live_air_quality],  # Gemini will call this automatically when needed
-                temperature=0.7,
+                tools=[get_live_air_quality],
+                temperature=0.3,  # Lower temperature prevents creative off-topic drift
             )
         )
-        reply = response.text
-        if not reply:
-            reply = "I couldn't generate a response right now. Please try again."
-        return {"reply": reply}
+
+        response = chat.send_message(request.message)
+
+        if not response.text:
+            return {"reply": "I couldn't retrieve a formatted response at this moment. Please try again."}
+
+        return {"reply": response.text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(e)}")
 
 
 # --------------------------------------------------------------------
-# 2. Healthcheck Endpoint
+# 2. Direct REST Endpoint for Live AQI
+# --------------------------------------------------------------------
+@app.get("/api/v1/air-quality")
+async def get_live_aqi_endpoint(city: str = Query(..., description="City name")):
+    result = get_live_air_quality(city)
+    if result.startswith("Error"):
+        raise HTTPException(status_code=404, detail=result)
+    return {"data": result}
+
+
+# --------------------------------------------------------------------
+# 3. Healthcheck Endpoint
 # --------------------------------------------------------------------
 @app.get("/")
 def read_root():
-    return {"status": "FastAPI Gemini AI Chatbot with Live Open-Meteo AQI Tools"}
+    return {"status": "FastAPI Gemini Domain-Restricted Chatbot Service Running"}
