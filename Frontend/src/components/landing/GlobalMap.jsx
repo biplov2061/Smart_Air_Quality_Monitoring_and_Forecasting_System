@@ -2,22 +2,21 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents, AttributionControl } from "react-leaflet"
 import L from "leaflet"
 import { useAQI } from "../../context/useAQI"
-import { getAQIColor, getAQIBand } from "../../data/aqiService"
+import { getAQIBand } from "../../data/aqiService"
 import "leaflet/dist/leaflet.css"
 
 function MapController({ searchQuery, filteredCities }) {
   const map = useMap()
 
   useEffect(() => {
+    if (!searchQuery) return
     if (filteredCities.length === 1) {
       map.setView([filteredCities[0].lat, filteredCities[0].lng], 5, { animate: true })
     } else if (filteredCities.length > 1) {
       const bounds = filteredCities.map((c) => [c.lat, c.lng])
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 4, animate: true })
-    } else {
-      map.setView([20, 0], 2, { animate: true })
     }
-  }, [searchQuery, filteredCities, map])
+  }, [searchQuery, map])
 
   return null
 }
@@ -42,6 +41,28 @@ function hexToRgb(hex) {
         b: parseInt(result[3], 16),
       }
     : { r: 0, g: 0, b: 0 }
+}
+
+// Softer, tuned AQI palette for the map. Keeps category distinction but
+// avoids the harsh, saturated tones (esp. #ff0000 red) that clump on-axis.
+const TUNED_COLORS = {
+  "No data": "#94a3b8",
+  Good: "#3cb371",
+  Moderate: "#e5c83c",
+  "Unhealthy (Sensitive)": "#f08a24",
+  Unhealthy: "#e74c3c",
+  "Very Unhealthy": "#8e6bbf",
+  Hazardous: "#9c2244",
+}
+
+function getMapColor(aqi) {
+  if (aqi == null || isNaN(aqi)) return TUNED_COLORS["No data"]
+  if (aqi <= 50) return TUNED_COLORS.Good
+  if (aqi <= 100) return TUNED_COLORS.Moderate
+  if (aqi <= 150) return TUNED_COLORS["Unhealthy (Sensitive)"]
+  if (aqi <= 200) return TUNED_COLORS.Unhealthy
+  if (aqi <= 300) return TUNED_COLORS["Very Unhealthy"]
+  return TUNED_COLORS.Hazardous
 }
 
 function AQIPulseStyles() {
@@ -106,35 +127,26 @@ function RealisticHeatmap({ filteredCities }) {
         const py = point.y / scale
 
         const intensity = Math.min(1, city.aqi / 300)
-        const baseRadius = Math.max(35, city.aqi * 0.7) / scale
-        const pulseFactor = 1 + 0.2 * Math.sin(time + city.aqi * 0.01)
+        const zoom = map.getZoom()
+        // Shrink the glow at low zoom so clusters of cities don't merge into a blur.
+        const spreadScale = Math.min(1, 0.35 + (zoom - 2) / 5)
+        const baseRadius = (Math.max(12, city.aqi * 0.4) * spreadScale) / scale
+        const pulseFactor = 1 + 0.12 * Math.sin(time + city.aqi * 0.01)
         const pulseRadius = baseRadius * pulseFactor
-        const color = getAQIColor(city.aqi)
+        const color = getMapColor(city.aqi)
         const rgb = hexToRgb(color)
 
         const grad = ctx.createRadialGradient(px, py, 0, px, py, pulseRadius)
-        const peakAlpha = 0.3 + intensity * 0.4
+        const peakAlpha = 0.16 + intensity * 0.2
         grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha})`)
-        grad.addColorStop(0.25, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.7})`)
-        grad.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.3})`)
-        grad.addColorStop(0.8, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.1})`)
+        grad.addColorStop(0.3, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.6})`)
+        grad.addColorStop(0.6, `rgba(${rgb.r},${rgb.g},${rgb.b},${peakAlpha * 0.25})`)
         grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`)
 
         ctx.fillStyle = grad
         ctx.beginPath()
         ctx.arc(px, py, pulseRadius, 0, Math.PI * 2)
         ctx.fill()
-
-        if (city.aqi > 80) {
-          const hazeGrad = ctx.createRadialGradient(px, py, 0, px, py, pulseRadius * 3)
-          hazeGrad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.05)`)
-          hazeGrad.addColorStop(0.5, `rgba(${rgb.r},${rgb.g},${rgb.b},0.02)`)
-          hazeGrad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`)
-          ctx.fillStyle = hazeGrad
-          ctx.beginPath()
-          ctx.arc(px, py, pulseRadius * 3, 0, Math.PI * 2)
-          ctx.fill()
-        }
       })
 
       time += 0.025
@@ -162,34 +174,34 @@ function GlowLayer({ filteredCities }) {
     const group = L.layerGroup()
 
     filteredCities.forEach((city) => {
-      const color = getAQIColor(city.aqi)
+      const color = getMapColor(city.aqi)
       const intensity = Math.min(1, city.aqi / 300)
-      const baseRadius = Math.max(15, city.aqi * 0.25)
+      const baseRadius = Math.max(8, city.aqi * 0.18)
 
       if (city.aqi > 60) {
         L.circleMarker([city.lat, city.lng], {
-          radius: baseRadius * 4,
+          radius: baseRadius * 3,
           color: color,
           fillColor: color,
-          fillOpacity: 0.03 * intensity,
-          weight: 1,
-          opacity: 0.06 * intensity,
+          fillOpacity: 0.02 * intensity,
+          weight: 0.5,
+          opacity: 0.04 * intensity,
         }).addTo(group)
       }
 
       L.circleMarker([city.lat, city.lng], {
-        radius: baseRadius * 2.5,
+        radius: baseRadius * 2,
         color: color,
         fillColor: color,
-        fillOpacity: 0.07 * intensity,
+        fillOpacity: 0.04 * intensity,
         weight: 0,
       }).addTo(group)
 
       L.circleMarker([city.lat, city.lng], {
-        radius: baseRadius * 1.3,
+        radius: baseRadius * 1.2,
         color: color,
         fillColor: color,
-        fillOpacity: 0.15 * intensity,
+        fillOpacity: 0.08 * intensity,
         weight: 0,
       }).addTo(group)
     })
@@ -204,12 +216,12 @@ function GlowLayer({ filteredCities }) {
 }
 
 const AQI_COLORS = [
-  { max: 50, color: "#00e400", label: "Good" },
-  { max: 100, color: "#ffff00", label: "Moderate" },
-  { max: 150, color: "#ff7e00", label: "Unhealthy (Sensitive)" },
-  { max: 200, color: "#ff0000", label: "Unhealthy" },
-  { max: 300, color: "#8f3f97", label: "Very Unhealthy" },
-  { max: 500, color: "#7e0023", label: "Hazardous" },
+  { max: 50, color: TUNED_COLORS.Good, label: "Good" },
+  { max: 100, color: TUNED_COLORS.Moderate, label: "Moderate" },
+  { max: 150, color: TUNED_COLORS["Unhealthy (Sensitive)"], label: "Unhealthy (Sensitive)" },
+  { max: 200, color: TUNED_COLORS.Unhealthy, label: "Unhealthy" },
+  { max: 300, color: TUNED_COLORS["Very Unhealthy"], label: "Very Unhealthy" },
+  { max: 500, color: TUNED_COLORS.Hazardous, label: "Hazardous" },
 ]
 
 export default function GlobalMap({ searchQuery, onPointSelect }) {
@@ -225,23 +237,28 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
     )
   }, [searchQuery, cities])
 
+  const withData = useMemo(
+    () => filteredCities.filter((c) => c.aqi != null),
+    [filteredCities]
+  )
+
   const topPolluted = useMemo(() => {
-    return [...filteredCities].sort((a, b) => b.aqi - a.aqi).slice(0, 5)
-  }, [filteredCities])
+    return [...withData].sort((a, b) => b.aqi - a.aqi).slice(0, 5)
+  }, [withData])
 
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden">
       <div
         className="absolute inset-0 rounded-2xl z-[1] pointer-events-none"
         style={{
-          background: "linear-gradient(135deg, rgba(0,228,64,0.15) 0%, rgba(255,255,0,0.1) 25%, rgba(255,126,0,0.12) 50%, rgba(255,0,0,0.15) 75%, rgba(143,63,151,0.1) 100%)",
+          background: "linear-gradient(135deg, rgba(0,228,64,0.08) 0%, rgba(255,255,0,0.05) 25%, rgba(255,126,0,0.06) 50%, rgba(255,0,0,0.08) 75%, rgba(143,63,151,0.05) 100%)",
           mixBlendMode: "overlay",
         }}
       />
       <div
         className="absolute inset-0 rounded-2xl z-[1] pointer-events-none"
         style={{
-          background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 15%, transparent 85%, rgba(0,0,0,0.3) 100%)",
+          background: "linear-gradient(180deg, rgba(0,0,0,0.18) 0%, transparent 15%, transparent 85%, rgba(0,0,0,0.18) 100%)",
         }}
       />
       <div className="relative w-full h-full z-0">
@@ -249,6 +266,10 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
         <MapContainer
           center={[20, 0]}
           zoom={2}
+          minZoom={2}
+          maxBounds={[[-85, -180], [85, 180]]}
+          maxBoundsViscosity={1.0}
+          worldCopyJump={true}
           className="w-full h-full"
           zoomControl={false}
           scrollWheelZoom={true}
@@ -258,15 +279,14 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
-          {/* Minimal, required attribution (drops the "Leaflet" prefix). */}
           <AttributionControl position="bottomright" prefix={false} />
           <MapController searchQuery={searchQuery} filteredCities={filteredCities} />
           <ClickHandler onPick={(lat, lng) => onPointSelect?.({ lat, lng })} />
-          <RealisticHeatmap filteredCities={filteredCities} />
-          <GlowLayer filteredCities={filteredCities} />
+          <RealisticHeatmap filteredCities={withData} />
+          <GlowLayer filteredCities={withData} />
 
-          {filteredCities.map((city) => {
-            const color = getAQIColor(city.aqi)
+          {withData.map((city) => {
+            const color = getMapColor(city.aqi)
             const radius = Math.max(7, city.aqi * 0.1)
             const rgb = hexToRgb(color)
             const isTopPolluted = topPolluted.some((c) => c.name === city.name && c.country === city.country)
@@ -276,11 +296,11 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
                 center={[city.lat, city.lng]}
                 radius={radius}
                 pathOptions={{
-                  color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.8)`,
+                  color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`,
                   fillColor: color,
-                  fillOpacity: 0.95,
-                  weight: isTopPolluted ? 3 : 2,
-                  opacity: 0.9,
+                  fillOpacity: 0.75,
+                  weight: isTopPolluted ? 1 : 0.6,
+                  opacity: 0.5,
                 }}
                 eventHandlers={{
                   click: () =>
@@ -317,7 +337,7 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
 
       <div className="absolute top-3 left-3 z-[1000] pointer-events-none bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
         <span className="text-xs text-slate-600 font-mono">
-          {filteredCities.length} cities monitored
+          {withData.length} cities monitored
         </span>
       </div>
 
@@ -340,7 +360,7 @@ export default function GlobalMap({ searchQuery, onPointSelect }) {
                 <div key={city.id} className="flex items-center gap-1.5">
                   <span
                     className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: getAQIColor(city.aqi) }}
+                    style={{ backgroundColor: getMapColor(city.aqi) }}
                   />
                   <span className="text-[11px] font-medium text-slate-700">{city.name}</span>
                   <span className="text-[11px] font-mono text-slate-500">{city.aqi}</span>

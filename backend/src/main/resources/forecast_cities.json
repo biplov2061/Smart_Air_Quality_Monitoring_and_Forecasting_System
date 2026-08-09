@@ -1,0 +1,93 @@
+[
+  {
+    "cityName": "Bhaktapur",
+    "country": "Nepal",
+    "latitude": 27.67,
+    "longitude": 85.43,
+    "mlCityId": 1
+  },
+  {
+    "cityName": "Bangkok",
+    "country": "Thailand",
+    "latitude": 13.800003,
+    "longitude": 100.5,
+    "mlCityId": 2
+  },
+  {
+    "cityName": "Beijing",
+    "country": "China",
+    "latitude": 39.90001,
+    "longitude": 116.399994,
+    "mlCityId": 3
+  },
+  {
+    "cityName": "Cairo",
+    "country": "Egypt",
+    "latitude": 30.0,
+    "longitude": 31.2,
+    "mlCityId": 4
+  },
+  {
+    "cityName": "Delhi",
+    "country": "India",
+    "latitude": 28.700005,
+    "longitude": 77.100006,
+    "mlCityId": 5
+  },
+  {
+    "cityName": "Dhaka",
+    "country": "Bangladesh",
+    "latitude": 23.800003,
+    "longitude": 90.399994,
+    "mlCityId": 6
+  },
+  {
+    "cityName": "Kathmandu",
+    "country": "Nepal",
+    "latitude": 27.700005,
+    "longitude": 85.30002,
+    "mlCityId": 7
+  },
+  {
+    "cityName": "London",
+    "country": "UK",
+    "latitude": 51.5,
+    "longitude": -0.10000038,
+    "mlCityId": 8
+  },
+  {
+    "cityName": "Mumbai",
+    "country": "India",
+    "latitude": 19.099998,
+    "longitude": 72.90001,
+    "mlCityId": 9
+  },
+  {
+    "cityName": "New York",
+    "country": "USA",
+    "latitude": 40.699997,
+    "longitude": -74.0,
+    "mlCityId": 10
+  },
+  {
+    "cityName": "Seoul",
+    "country": "South Korea",
+    "latitude": 37.6,
+    "longitude": 127.0,
+    "mlCityId": 11
+  },
+  {
+    "cityName": "Tokyo",
+    "country": "Japan",
+    "latitude": 35.700005,
+    "longitude": 139.70001,
+    "mlCityId": 12
+  },
+  {
+    "cityName": "Pokhara",
+    "country": "Nepal",
+    "latitude": 28.2083,
+    "longitude": 83.9889,
+    "mlCityId": 13
+  }
+]

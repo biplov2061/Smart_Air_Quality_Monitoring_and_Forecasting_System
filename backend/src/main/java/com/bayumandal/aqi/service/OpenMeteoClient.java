@@ -1,22 +1,27 @@
 package com.bayumandal.aqi.service;
 
-import com.bayumandal.aqi.config.AppProperties;
-import com.bayumandal.aqi.dto.AqiSample;
-import com.bayumandal.aqi.dto.GeoResultDto;
-import com.bayumandal.aqi.dto.TrendPointDto;
-import com.bayumandal.aqi.dto.WeatherDto;
-import com.bayumandal.aqi.entity.MonitoredLocation;
-import com.fasterxml.jackson.databind.JsonNode;
+import java.net.URI;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import java.net.URI;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+
+import com.bayumandal.aqi.config.AppProperties;
+import com.bayumandal.aqi.dto.AqiSample;
+import com.bayumandal.aqi.dto.GeoResultDto;
+import com.bayumandal.aqi.dto.HistoricalAqiSample;
+import com.bayumandal.aqi.dto.TrendPointDto;
+import com.bayumandal.aqi.dto.WeatherDto;
+import com.bayumandal.aqi.dto.WeatherHistorySample;
+import com.bayumandal.aqi.entity.MonitoredLocation;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Service
 public class OpenMeteoClient {
@@ -24,6 +29,9 @@ public class OpenMeteoClient {
     private static final Logger log = LoggerFactory.getLogger(OpenMeteoClient.class);
 
     private static final String CURRENT_FIELDS =
+            "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide";
+
+    private static final String HISTORICAL_FIELDS =
             "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide";
 
     private final RestClient restClient;
@@ -146,26 +154,51 @@ public class OpenMeteoClient {
         return points;
     }
 
-    public WeatherDto fetchWeather(double lat, double lng) {
+   
+   public WeatherDto fetchWeather(double lat, double lng) {
+
+    int maxAttempts = 3;
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+
         try {
-            URI uri = UriComponentsBuilder.fromHttpUrl(props.getOpenmeteo().getWeatherUrl())
+
+            URI uri = UriComponentsBuilder
+                    .fromHttpUrl(props.getOpenmeteo().getWeatherUrl())
                     .queryParam("latitude", fmt(lat))
                     .queryParam("longitude", fmt(lng))
-                    .queryParam("current",
-                            "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,pressure_msl,wind_speed_10m")
+                    .queryParam(
+                            "current",
+                            "temperature_2m,relative_humidity_2m,apparent_temperature," +
+                            "weather_code,pressure_msl,wind_speed_10m,precipitation"
+                    )
                     .queryParam("timezone", "auto")
                     .build()
                     .encode()
                     .toUri();
 
-            JsonNode root = restClient.get().uri(uri).retrieve().body(JsonNode.class);
-            if (root == null) return null;
-            if (root.isArray()) root = root.get(0);
-            if (root == null) return null;
+            JsonNode root =
+                    restClient.get()
+                            .uri(uri)
+                            .retrieve()
+                            .body(JsonNode.class);
+
+            if (root == null) {
+                return null;
+            }
+
+            if (root.isArray()) {
+                root = root.get(0);
+            }
+
             JsonNode c = root.path("current");
-            if (c.isMissingNode() || c.isNull()) return null;
+
+            if (c.isMissingNode() || c.isNull()) {
+                return null;
+            }
 
             Integer code = asInt(c, "weather_code");
+
             return new WeatherDto(
                     asDouble(c, "temperature_2m"),
                     asDouble(c, "apparent_temperature"),
@@ -173,13 +206,282 @@ public class OpenMeteoClient {
                     asDouble(c, "wind_speed_10m"),
                     asDouble(c, "pressure_msl"),
                     code,
-                    weatherDescription(code)
+                    weatherDescription(code),
+                    asDouble(c, "precipitation")
             );
+
         } catch (Exception e) {
-            log.warn("Open-Meteo weather fetch failed for {},{}: {}", lat, lng, e.getMessage());
-            return null;
+
+            log.warn(
+                    "Weather fetch failed for {},{} - attempt {}/{}: {}",
+                    lat,
+                    lng,
+                    attempt,
+                    maxAttempts,
+                    e.getMessage()
+            );
+
+            // Wait before retrying
+            if (attempt < maxAttempts) {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            }
         }
     }
+
+    log.error(
+            "Weather fetch failed after {} attempts for {},{}",
+            maxAttempts,
+            lat,
+            lng
+    );
+
+    return null;
+}
+
+
+    //This method fetch air quality features by calling air quality live api
+    public List<HistoricalAqiSample> fetchHistorical(
+            double lat,
+            double lng
+    ) {
+
+        List<HistoricalAqiSample> samples = new ArrayList<>();
+
+        try {
+
+            URI uri = UriComponentsBuilder
+                    .fromHttpUrl(props.getOpenmeteo().getAirQualityUrl())
+
+                    .queryParam("latitude", fmt(lat))
+                    .queryParam("longitude", fmt(lng))
+
+                    // AQI + pollutants
+                    .queryParam(
+                            "hourly",
+                            "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide"
+                    )
+
+                    // weather features
+                    .queryParam(
+                            "temperature_unit",
+                            "celsius"
+                    )
+
+                    .queryParam(
+                            "wind_speed_unit",
+                            "kmh"
+                    )
+
+                    .queryParam(
+                            "past_days",
+                            2
+                    )
+
+                    .queryParam(
+                            "forecast_days",
+                            0
+                    )
+
+                    .queryParam(
+                            "timezone",
+                            "auto"
+                    )
+
+                    .build()
+                    .encode()
+                    .toUri();
+
+
+            JsonNode root = restClient
+                    .get()
+                    .uri(uri)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+
+            if (root == null) {
+                return samples;
+            }
+
+
+            JsonNode hourly = root.path("hourly");
+
+
+            //pollutants extraction
+            JsonNode times = hourly.path("time");
+            JsonNode aqi = hourly.path("us_aqi");
+
+            JsonNode pm25 = hourly.path("pm2_5");
+            JsonNode pm10 = hourly.path("pm10");
+            JsonNode ozone = hourly.path("ozone");
+            JsonNode no2 = hourly.path("nitrogen_dioxide");
+            JsonNode so2 = hourly.path("sulphur_dioxide");
+            JsonNode co = hourly.path("carbon_monoxide");
+
+
+
+            if (!times.isArray()) {
+                return samples;
+            }
+
+
+            for(int i = 0; i < times.size(); i++){
+
+
+                LocalDateTime time =
+                        LocalDateTime.parse(
+                                times.get(i).asText()
+                        );
+
+
+                samples.add(
+                        new HistoricalAqiSample(
+
+                                time,
+
+                                getDouble(pm25,i),
+                                getDouble(pm10,i),
+                                getDouble(ozone,i),
+                                getDouble(no2,i),
+                                getDouble(so2,i),
+                                getDouble(co,i),
+
+                                null,
+                                null,
+                                null,
+                                null,
+
+
+                                getDouble(aqi,i)
+                        )
+                );
+
+            }
+
+
+        } catch(Exception e){
+
+            log.warn(
+                    "Historical fetch failed for {},{} : {}",
+                    lat,
+                    lng,
+                    e.getMessage()
+            );
+
+        }
+
+
+        return samples;
+    }
+
+    //This method fetch weather features by calling ../open-meteo/forecast live api
+    public List<WeatherHistorySample> fetchHistoricalWeather(
+            double lat,
+            double lng
+    ) {
+
+        List<WeatherHistorySample> samples = new ArrayList<>();
+
+        try {
+
+            URI uri = UriComponentsBuilder
+                    .fromHttpUrl(props.getOpenmeteo().getWeatherUrl())
+
+                    .queryParam("latitude", fmt(lat))
+                    .queryParam("longitude", fmt(lng))
+
+                    .queryParam(
+                            "hourly",
+                            "temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation"
+                    )
+
+                    .queryParam("past_days", 2)
+
+                    .queryParam("forecast_days", 0)
+
+                    .queryParam("timezone", "auto")
+
+                    .build()
+                    .encode()
+                    .toUri();
+
+
+            JsonNode root = restClient
+                    .get()
+                    .uri(uri)
+                    .retrieve()
+                    .body(JsonNode.class);
+
+
+            if(root == null)
+                return samples;
+
+
+            JsonNode hourly = root.path("hourly");
+
+
+            JsonNode times = hourly.path("time");
+
+            JsonNode temperature =
+                    hourly.path("temperature_2m");
+
+            JsonNode humidity =
+                    hourly.path("relative_humidity_2m");
+
+            JsonNode wind =
+                    hourly.path("wind_speed_10m");
+
+            JsonNode precipitation =
+                    hourly.path("precipitation");
+
+
+            for(int i=0;i<times.size();i++){
+
+
+                samples.add(
+                        new WeatherHistorySample(
+
+                                LocalDateTime.parse(
+                                        times.get(i).asText()
+                                ),
+
+                                getDouble(temperature,i),
+
+                                getDouble(humidity,i)
+                                        .intValue(),
+
+                                getDouble(wind,i),
+
+                                getDouble(precipitation,i)
+
+                        )
+                );
+            }
+
+
+        }catch(Exception e){
+
+            log.warn(
+                    "Historical weather fetch failed {} {}",
+                    lat,
+                    lng
+            );
+        }
+
+
+        return samples;
+    }
+
+
+
+
+
+
 
     private static String weatherDescription(Integer code) {
         if (code == null) return "—";
@@ -302,6 +604,54 @@ public class OpenMeteoClient {
         if (n == null || n.isNull()) return null;
         return n.asDouble();
     }
+
+
+    //this method return feature that has type Double
+
+    private static Double getDouble(
+            JsonNode node,
+            int index
+    ){
+
+        if(node == null || !node.isArray()){
+            return null;
+        }
+
+
+        JsonNode value = node.get(index);
+
+
+        if(value == null || value.isNull()){
+            return null;
+        }
+
+
+        return value.asDouble();
+    }
+
+
+    //this method return feature that has type int
+    private static Integer getInt(
+            JsonNode node,
+            int index
+    ){
+
+        if(node == null || !node.isArray()){
+            return null;
+        }
+
+
+        JsonNode value = node.get(index);
+
+
+        if(value == null || value.isNull()){
+            return null;
+        }
+
+
+        return value.asInt();
+    }
+
 
     private static String fmt(double coord) {
         return String.format(Locale.US, "%.4f", coord);

@@ -7,5 +7,6 @@ public record WeatherDto(
         Double windSpeed,
         Double pressure,
         Integer weatherCode,
-        String description
+        String description,
+        Double precipitation
 ) {}

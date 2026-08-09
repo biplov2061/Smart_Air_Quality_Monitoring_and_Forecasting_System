@@ -1,7 +1,7 @@
 import { getCountryRanking } from "../../data/apiClient"
 import { usePolling } from "../../data/useApi"
 import { CITIES_REFRESH_MS } from "../../data/config"
-import { getAQIColor, getAQIBand } from "../../data/aqiService"
+import { getAQIColor } from "../../data/aqiService"
 
 export default function CountryRanking() {
   const { data, loading } = usePolling(() => getCountryRanking(5), [], CITIES_REFRESH_MS)
@@ -25,7 +25,6 @@ export default function CountryRanking() {
         <div className="space-y-4">
           {countries.map((country) => {
             const color = getAQIColor(country.aqi)
-            const band = getAQIBand(country.aqi)
             const widthPercent = (country.aqi / maxAQI) * 100
 
             return (
@@ -41,7 +40,6 @@ export default function CountryRanking() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-900 dark:text-white font-mono text-sm font-bold">{country.aqi}</span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">{band}</span>
                   </div>
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">

@@ -95,7 +95,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto animate-fade-up">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-display font-bold text-slate-900 dark:text-white tracking-tight leading-[1.05]">
             Breathe{" "}
-            <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500 bg-clip-text text-transparent">
+            <span className="text-sky-500 dark:text-sky-400">
               Smarter
             </span>
           </h1>
@@ -105,7 +105,7 @@ export default function Home() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
-            <a href="#explore" className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-emerald-600 text-white font-semibold shadow-sm hover:bg-slate-800 dark:hover:bg-emerald-500 hover:shadow-md transition-all">
+            <a href="#explore" className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-sky-600 text-white font-semibold shadow-sm hover:bg-slate-800 dark:hover:bg-sky-500 hover:shadow-md transition-all">
               Explore the map
             </a>
             <span className="text-slate-400">
