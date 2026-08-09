@@ -74,12 +74,8 @@ export function getStats() {
   return get("/stats")
 }
 
-export async function getPrediction(country, city) {
-  const params = new URLSearchParams({ country })
-  if (city) params.set("city", city)
-  const res = await fetch(`${API_BASE}/predict?${params.toString()}`)
-  if (!res.ok) throw new Error(`API ${res.status} for /predict`)
-  return res.json()
+export async function getPrediction(cityId) {
+  return get(`/prediction/${encodeURIComponent(String(cityId))}`)
 }
 
 function formatTimeLabel(t) {
@@ -89,11 +85,49 @@ function formatTimeLabel(t) {
   return s
 }
 
-export function normalizePredictionSeries(raw, country) {
+function toUtcHourLabel(ms) {
+  const date = new Date(ms)
+  const y = date.getUTCFullYear()
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0")
+  const d = String(date.getUTCDate()).padStart(2, "0")
+  const h = String(date.getUTCHours()).padStart(2, "0")
+  return `${y}-${m}-${d}T${h}:00`
+}
+
+function round2(n) {
+  return Math.round(Number(n) * 100) / 100
+}
+
+function withHourlyTimes(values, utcOffsetHours = 0) {
+  const offsetMs = utcOffsetHours * 3600_000
+  // Work in the city's local wall-clock space (handles fractional offsets like
+  // Kathmandu's +5:45). Reading getUTC*() of the offset-shifted instant gives
+  // the city's local hour.
+  const local = new Date(new Date().getTime() + offsetMs)
+  // The first prediction value is the NEXT local hour (t+1), not the current one.
+  // e.g. at 2:30 PM local, the series must start at 3 PM, 4 PM, 5 PM...
+  const firstLabelMs = Date.UTC(
+    local.getUTCFullYear(),
+    local.getUTCMonth(),
+    local.getUTCDate(),
+    local.getUTCHours() + 1
+  )
+  return values
+    .map((v, i) => {
+      const t = new Date(firstLabelMs + i * 3600_000)
+      return { time: formatTimeLabel(toUtcHourLabel(t.getTime())), aqi: round2(v) }
+    })
+    .filter((p) => Number.isFinite(p.aqi))
+}
+
+export function normalizePredictionSeries(raw, country, utcOffsetHours = 0) {
   if (!raw) return []
 
   let arr = null
-  if (Array.isArray(raw)) arr = raw
+
+  // Backend PredictionResponseDTO: { "predicted_aqi": [n, n, n, ...] }
+  if (Array.isArray(raw.predicted_aqi)) arr = raw.predicted_aqi
+  else if (Array.isArray(raw)) arr = raw
   else if (Array.isArray(raw.predictions)) arr = raw.predictions
   else if (Array.isArray(raw.forecast)) arr = raw.forecast
   else if (Array.isArray(raw.data)) arr = raw.data
@@ -105,10 +139,15 @@ export function normalizePredictionSeries(raw, country) {
   }
   if (!Array.isArray(arr)) return []
 
-  const countryOf = (it) => it.country ?? it.name ?? null
+  // Flat list of raw numeric values -> synthesize hourly timestamps
+  if (arr.every((v) => v !== null && typeof v !== "object")) {
+    return withHourlyTimes(arr, utcOffsetHours)
+  }
+
+  const countryOf = (r) => r.country ?? r.name ?? null
   const matched = country
-    ? arr.filter((it) => {
-        const c = countryOf(it)
+    ? arr.filter((r) => {
+        const c = countryOf(r)
         return c == null || String(c).toLowerCase() === String(country).toLowerCase()
       })
     : arr
@@ -118,7 +157,7 @@ export function normalizePredictionSeries(raw, country) {
     .map((it) => {
       const rawTime = it.time ?? it.hour ?? it.timestamp ?? it.datetime ?? it.date ?? ""
       const rawAqi = it.aqi ?? it.value ?? it.predicted_aqi ?? it.prediction ?? it.us_aqi
-      return { time: formatTimeLabel(rawTime), aqi: Number(rawAqi) }
+      return { time: formatTimeLabel(rawTime), aqi: round2(rawAqi) }
     })
     .filter((p) => Number.isFinite(p.aqi))
 }

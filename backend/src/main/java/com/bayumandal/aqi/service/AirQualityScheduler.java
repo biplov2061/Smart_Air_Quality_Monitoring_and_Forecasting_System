@@ -1,6 +1,5 @@
 package com.bayumandal.aqi.service;
 
-import com.bayumandal.aqi.service.AirQualityHistoryService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 

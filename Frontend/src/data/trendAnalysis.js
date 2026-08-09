@@ -110,7 +110,7 @@ export const AQI_BAND_RANGES = [
 
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-export function withDayLabels(points) {
+export function withDayLabels(points, utcOffsetHours = 0) {
   const list = Array.isArray(points) ? points : []
   if (list.length === 0) return []
 
@@ -120,29 +120,20 @@ export function withDayLabels(points) {
     return Number.isFinite(h) ? h : null
   })
 
-  let anchor = 0
-  let best = Infinity
-  hours.forEach((h, i) => {
-    if (h == null) return
-    const d = Math.abs(h - now.getHours())
-    if (d < best) {
-      best = d
-      anchor = i
-    }
-  })
+  const localNow = new Date(now.getTime() + utcOffsetHours * 3600_000)
+  const nowHour = localNow.getUTCHours()
 
+  // The forecast is generated as the N hours *after* "now", so the first point
+  // is the anchor. If its hour wrapped past local midnight (e.g. now 23:XX whose
+  // next hour is 0:00), it belongs to the following day.
   const dates = new Array(list.length)
-  dates[anchor] = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  for (let i = anchor + 1; i < list.length; i++) {
+  dates[0] = new Date(Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate()))
+  if (hours[0] != null && hours[0] < nowHour) dates[0].setUTCDate(dates[0].getUTCDate() + 1)
+  for (let i = 1; i < list.length; i++) {
     const d = new Date(dates[i - 1])
-    if (hours[i] != null && hours[i - 1] != null && hours[i] < hours[i - 1]) d.setDate(d.getDate() + 1)
-    dates[i] = d
-  }
-  for (let i = anchor - 1; i >= 0; i--) {
-    const d = new Date(dates[i + 1])
-    if (hours[i] != null && hours[i + 1] != null && hours[i] > hours[i + 1]) d.setDate(d.getDate() - 1)
+    if (hours[i] != null && hours[i - 1] != null && hours[i] < hours[i - 1]) d.setUTCDate(d.getUTCDate() + 1)
     dates[i] = d
   }
 
-  return list.map((p, i) => ({ ...p, day: dates[i] ? WEEKDAYS_SHORT[dates[i].getDay()] : "" }))
+  return list.map((p, i) => ({ ...p, day: dates[i] ? WEEKDAYS_SHORT[dates[i].getUTCDay()] : "" }))
 }

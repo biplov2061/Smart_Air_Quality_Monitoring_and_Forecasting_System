@@ -1,23 +1,27 @@
 package com.bayumandal.aqi.service;
 
-import com.bayumandal.aqi.config.AppProperties;
-import com.bayumandal.aqi.dto.*;
-import com.bayumandal.aqi.entity.MonitoredLocation;
-import com.fasterxml.jackson.databind.JsonNode;
-
+import java.net.URI;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import java.net.URI;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
-import static java.lang.reflect.Array.getDouble;
+import com.bayumandal.aqi.config.AppProperties;
+import com.bayumandal.aqi.dto.AqiSample;
+import com.bayumandal.aqi.dto.GeoResultDto;
+import com.bayumandal.aqi.dto.HistoricalAqiSample;
+import com.bayumandal.aqi.dto.TrendPointDto;
+import com.bayumandal.aqi.dto.WeatherDto;
+import com.bayumandal.aqi.dto.WeatherHistorySample;
+import com.bayumandal.aqi.entity.MonitoredLocation;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Service
 public class OpenMeteoClient {
@@ -150,26 +154,51 @@ public class OpenMeteoClient {
         return points;
     }
 
-    public WeatherDto fetchWeather(double lat, double lng) {
+   
+   public WeatherDto fetchWeather(double lat, double lng) {
+
+    int maxAttempts = 3;
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+
         try {
-            URI uri = UriComponentsBuilder.fromHttpUrl(props.getOpenmeteo().getWeatherUrl())
+
+            URI uri = UriComponentsBuilder
+                    .fromHttpUrl(props.getOpenmeteo().getWeatherUrl())
                     .queryParam("latitude", fmt(lat))
                     .queryParam("longitude", fmt(lng))
-                    .queryParam("current",
-                            "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,pressure_msl,wind_speed_10m,precipitation")
+                    .queryParam(
+                            "current",
+                            "temperature_2m,relative_humidity_2m,apparent_temperature," +
+                            "weather_code,pressure_msl,wind_speed_10m,precipitation"
+                    )
                     .queryParam("timezone", "auto")
                     .build()
                     .encode()
                     .toUri();
 
-            JsonNode root = restClient.get().uri(uri).retrieve().body(JsonNode.class);
-            if (root == null) return null;
-            if (root.isArray()) root = root.get(0);
-            if (root == null) return null;
+            JsonNode root =
+                    restClient.get()
+                            .uri(uri)
+                            .retrieve()
+                            .body(JsonNode.class);
+
+            if (root == null) {
+                return null;
+            }
+
+            if (root.isArray()) {
+                root = root.get(0);
+            }
+
             JsonNode c = root.path("current");
-            if (c.isMissingNode() || c.isNull()) return null;
+
+            if (c.isMissingNode() || c.isNull()) {
+                return null;
+            }
 
             Integer code = asInt(c, "weather_code");
+
             return new WeatherDto(
                     asDouble(c, "temperature_2m"),
                     asDouble(c, "apparent_temperature"),
@@ -180,11 +209,39 @@ public class OpenMeteoClient {
                     weatherDescription(code),
                     asDouble(c, "precipitation")
             );
+
         } catch (Exception e) {
-            log.warn("Open-Meteo weather fetch failed for {},{}: {}", lat, lng, e.getMessage());
-            return null;
+
+            log.warn(
+                    "Weather fetch failed for {},{} - attempt {}/{}: {}",
+                    lat,
+                    lng,
+                    attempt,
+                    maxAttempts,
+                    e.getMessage()
+            );
+
+            // Wait before retrying
+            if (attempt < maxAttempts) {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            }
         }
     }
+
+    log.error(
+            "Weather fetch failed after {} attempts for {},{}",
+            maxAttempts,
+            lat,
+            lng
+    );
+
+    return null;
+}
 
 
     //This method fetch air quality features by calling air quality live api

@@ -1,17 +1,10 @@
 import { useState, useRef } from "react"
-import chatIcon from "../../data/photos/chatbot.png"
+import chatIcon from "../../data/photos/Chatbot.png"
 
-const CHAT_API = import.meta.env.VITE_CHAT_API || "http://localhost:8000/api/v1/chat"
+const CHAT_API = import.meta.env.VITE_CHAT_API || "http://localhost:8001/api/v1/chat"
 
 const fallbackReplies = [
-  "Stay indoors if AQI is above 150.",
-  "Wear an N95 mask when stepping out.",
-  "Keep windows closed during high pollution.",
-  "Use an air purifier indoors.",
-  "Avoid outdoor exercise when AQI is unhealthy.",
-  "Sensitive groups should limit prolonged exertion.",
-  "Check the dashboard for real-time updates.",
-  "Plan outdoor activities during lower AQI hours.",
+ "Oops!, Chatbot is out of service. Please try again later.",
 ]
 
 async function getReply(message, history) {
@@ -62,12 +55,12 @@ export default function ChatBot() {
   return (
     <div className="fixed bottom-6 right-6 z-[1600] flex flex-col items-end gap-3">
       {open && (
-        <div className="w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+        <div className="w-80 sm:w-96 h-[480px] bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
             <span className="text-sm font-semibold text-slate-900 dark:text-white">AQI Assistant</span>
             <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
           </div>
-          <div className="flex-1 h-80 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
                 <div
@@ -112,13 +105,13 @@ export default function ChatBot() {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-14 h-14 rounded-full bg-sky-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+        className="w-[60px] h-[60px] rounded-full bg-white text-slate-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center border border-slate-200"
         aria-label="Chat"
       >
         <img
           src={chatIcon}
           alt="Chat"
-          className="w-8 h-8"
+          className="w-[52px] h-[52px] object-contain"
         />
       </button>
     </div>

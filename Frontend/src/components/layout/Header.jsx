@@ -49,10 +49,11 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3.5">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="relative w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
-            <span className="text-white font-bold">B</span>
-            <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
-          </div>
+          <img
+            src="/bayumandal.webp"
+            alt="bayumandal logo"
+            className="w-9 h-9 rounded-xl object-cover shadow-lg shadow-sky-500/20 ring-1 ring-white/30"
+          />
           <div className="leading-tight">
             <span className="block text-slate-900 dark:text-white font-display font-semibold text-lg tracking-tight">
               bayumandal

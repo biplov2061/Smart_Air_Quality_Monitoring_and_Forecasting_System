@@ -4,23 +4,23 @@
 
 package com.bayumandal.aqi.service;
 
-import com.bayumandal.aqi.dto.*;
-import com.bayumandal.aqi.entity.MonitoredLocation;
-import com.bayumandal.aqi.repository.AirQualityHistoryRepository;
-import com.bayumandal.aqi.repository.MonitoredLocationRepository;
-import com.bayumandal.aqi.dto.HistoricalAqiSample;
-import com.bayumandal.aqi.entity.AirQualityHistory;
-
-
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import org.springframework.stereotype.Service;
 import java.time.ZoneOffset;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.bayumandal.aqi.dto.AqiSample;
+import com.bayumandal.aqi.dto.HistoricalAqiSample;
+import com.bayumandal.aqi.dto.WeatherDto;
+import com.bayumandal.aqi.dto.WeatherHistorySample;
+import com.bayumandal.aqi.entity.AirQualityHistory;
+import com.bayumandal.aqi.entity.MonitoredLocation;
+import com.bayumandal.aqi.repository.AirQualityHistoryRepository;
+import com.bayumandal.aqi.repository.MonitoredLocationRepository;
 
 @Service
 public class AirQualityHistoryService {
@@ -237,132 +237,135 @@ public class AirQualityHistoryService {
     //This method only fetch current pollutants + aqi + weather data hourly for every 13 cities.
     public void fetchAndSaveLatestData() {
 
-        // Get only ML-enabled cities
-        List<MonitoredLocation> cities =
-                locationRepository.findByMlForecastEnabledTrue();
+    // Get only ML-enabled cities
+    List<MonitoredLocation> cities =
+            locationRepository.findByMlForecastEnabledTrue();
 
-        System.out.println(
-                "Fetching latest data for "
-                        + cities.size()
-                        + " cities..."
-        );
+    System.out.println(
+            "Fetching latest data for "
+                    + cities.size()
+                    + " cities..."
+    );
 
-        for (MonitoredLocation city : cities) {
+    for (MonitoredLocation city : cities) {
 
-            try {
+        try {
 
-                // Fetch latest AQI + pollutant data
-                AqiSample aqiSample =
-                        openMeteoClient.fetchCurrentPoint(
-                                city.getLatitude(),
-                                city.getLongitude()
-                        );
-
-                // Fetch latest weather data
-                WeatherDto weather =
-                        openMeteoClient.fetchWeather(
-                                city.getLatitude(),
-                                city.getLongitude()
-                        );
-
-
-                System.out.println(
-                        "Weather for "
-                                + city.getName()
-                                + " => precipitation = "
-                                + (weather != null ? weather.precipitation() : "weather null")
-                );
-
-                // Create new history record
-                AirQualityHistory history =
-                        new AirQualityHistory();
-
-                history.setCityId(
-                        city.getId()
-                );
-
-                //sends response on the basis of nepal local time.
-                history.setRecordedAt(
-                        aqiSample.sourceTime() != null
-                                ? LocalDateTime.ofInstant(
-                                aqiSample.sourceTime(),
-                                ZoneOffset.UTC
-                        )
-                                : LocalDateTime.now(ZoneOffset.UTC)
-                );
-
-                //this logic actually checks for existing row and prevent duplicate row
-                boolean exists =
-                        historyRepository.existsByCityIdAndRecordedAt(
-                                city.getId(),
-                                history.getRecordedAt()
-                        );
-
-
-                if(!exists){
-                    historyRepository.save(history);
-                }
-                else{
-                    System.out.println(
-                            "Duplicate skipped: "
-                                    + city.getId()
-                                    + " "
-                                    + history.getRecordedAt()
-                    );
-                }
-
-                // Pollutants
-                history.setPm25(
-                        aqiSample.pm25()
-                );
-
-                history.setPm10(
-                        aqiSample.pm10()
-                );
-
-                history.setOzone(
-                        aqiSample.ozone()
-                );
-
-                history.setCarbonMonoxide(
-                        aqiSample.co()
-                );
-
-                history.setNitrogenDioxide(
-                        aqiSample.no2()
-                );
-
-                history.setSulphurDioxide(
-                        aqiSample.so2()
-                );
-
-                // AQI
-                history.setAqi(
-                        aqiSample.aqi() == null
-                                ? null
-                                : aqiSample.aqi().doubleValue()
-                );
-
-                // Weather
-                if (weather != null) {
-
-                    history.setTemperature(
-                            weather.temperature()
+            // Fetch latest AQI + pollutant data
+            AqiSample aqiSample =
+                    openMeteoClient.fetchCurrentPoint(
+                            city.getLatitude(),
+                            city.getLongitude()
                     );
 
-                    history.setHumidity(
-                            weather.humidity()
+            // Fetch latest weather data
+            WeatherDto weather =
+                    openMeteoClient.fetchWeather(
+                            city.getLatitude(),
+                            city.getLongitude()
                     );
 
-                    history.setWindSpeed(
-                            weather.windSpeed()
+            System.out.println(
+                    "Weather for "
+                            + city.getName()
+                            + " => precipitation = "
+                            + (weather != null
+                            ? weather.precipitation()
+                            : "weather null")
+            );
+
+            // Create new history record
+            AirQualityHistory history =
+                    new AirQualityHistory();
+
+            history.setCityId(
+                    city.getId()
+            );
+
+            // Store Open-Meteo source time in UTC
+            history.setRecordedAt(
+                    aqiSample.sourceTime() != null
+                            ? LocalDateTime.ofInstant(
+                                    aqiSample.sourceTime(),
+                                    ZoneOffset.UTC
+                            )
+                            : LocalDateTime.now(ZoneOffset.UTC)
+            );
+
+            // -----------------------
+            // Pollutants
+            // -----------------------
+
+            history.setPm25(
+                    aqiSample.pm25()
+            );
+
+            history.setPm10(
+                    aqiSample.pm10()
+            );
+
+            history.setOzone(
+                    aqiSample.ozone()
+            );
+
+            history.setCarbonMonoxide(
+                    aqiSample.co()
+            );
+
+            history.setNitrogenDioxide(
+                    aqiSample.no2()
+            );
+
+            history.setSulphurDioxide(
+                    aqiSample.so2()
+            );
+
+            // -----------------------
+            // AQI
+            // -----------------------
+
+            history.setAqi(
+                    aqiSample.aqi() == null
+                            ? null
+                            : aqiSample.aqi().doubleValue()
+            );
+
+            // -----------------------
+            // Weather
+            // -----------------------
+
+            if (weather != null) {
+
+                history.setTemperature(
+                        weather.temperature()
+                );
+
+                history.setHumidity(
+                        weather.humidity()
+                );
+
+                history.setWindSpeed(
+                        weather.windSpeed()
+                );
+
+                history.setPrecipitation(
+                        weather.precipitation()
+                );
+            }
+
+            // -----------------------
+            // Duplicate check
+            // -----------------------
+
+            boolean exists =
+                    historyRepository.existsByCityIdAndRecordedAt(
+                            city.getId(),
+                            history.getRecordedAt()
                     );
 
-                    history.setPrecipitation(weather.precipitation());
+            if (!exists) {
 
-                }
-
-                // Save record
+                // Save only once, after all fields are populated
                 historyRepository.save(history);
 
                 System.out.println(
@@ -370,21 +373,31 @@ public class AirQualityHistoryService {
                                 + city.getName()
                 );
 
-            } catch (Exception e) {
+            } else {
 
                 System.out.println(
-                        "Failed to save latest data for "
-                                + city.getName()
-                                + " : "
-                                + e.getMessage()
+                        "Duplicate skipped: "
+                                + city.getId()
+                                + " "
+                                + history.getRecordedAt()
                 );
             }
-        }
 
-        System.out.println(
-                "Latest hourly update completed."
-        );
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Failed to save latest data for "
+                            + city.getName()
+                            + " : "
+                            + e.getMessage()
+            );
+        }
     }
+
+    System.out.println(
+            "Latest hourly update completed."
+    );
+}
 
 
 }
